@@ -126,7 +126,7 @@ def A_star(start, end, table, cols):
 
         # Generate children
         children = []
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]: # Adjacent squares
+        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]: # Adjacent squares
 
             # Get node position
             node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
@@ -214,7 +214,167 @@ def main():
         print(path)
         print(*path_directions, sep=" ")
 
+class Node_bfs():
+    """A node class for A* Pathfinding"""
+
+    def __init__(self, parent=None, position=None, visited=False, dist=0):
+        self.parent = parent
+        self.position = position
+        self.visited = visited
+        self.dist = dist
+
+    def __eq__(self, other):
+        return self.position == other.position
+
+
+
+
+
+class junct():
+    def __init__(self, row, column, parent_S):
+        self.row = row
+        self.column = column
+        self.parent_S = parent_S
+        # self.parent_G = parent_G
+
+    def __eq__(self, other):
+        return (self.row == other.row and self.column == other.column)
+
+
+def bidirectional_bfs(map_maze, start_x, start_y, end_x, end_y):
+    def get_value(maze, a, b):
+        return maze[a][b]
+
+    def is_out_of_bounds(a, b):
+        return (a < 0 or a > len(map_maze)-1) or (b < 0 or b > (len(map_maze[len(map_maze)-1]) -1))
+
+    # grid = self.grid
+    # dim = len(grid)
+    Q_start = []
+    Q_goal = []
+    visited = []
+    start = junct(start_x, start_y, None)
+    goal = junct(end_x, end_y, None)
+    Q_start.append(start)
+    Q_goal.append(goal)
+    visited.append(start)
+    visited.append(goal)
+
+    # beginning loop
+    while (len(Q_start) > 0) and (len(Q_goal) > 0):
+        # initializations
+        current_S = Q_start[0]
+        current_G = Q_goal[0]
+
+        row_S = current_S.row
+        column_S = current_S.column
+
+        row_G = current_G.row
+        column_G = current_G.column
+
+        # some mechanics
+        if len(Q_start) > 0:
+            Q_start.pop(0)
+        if len(Q_goal) > 0:
+            Q_goal.pop(0)
+
+        # in case the current node from starting is in the goal Queue
+        if (current_S in Q_goal):
+            # forming the path back to G
+            current = current_S
+            path_S = [current]
+            while current.parent_S is not None:
+                path_S.append(current.parent_S)
+                current = current.parent_S
+            path_S = [(item.row, item.column) for item in path_S]
+            print(path_S, "xxxxx")
+
+        # in case the current node from goal is in the start Queue
+        if (current_G in Q_start):
+            # forming the path back to S
+            current = current_G
+            path_G = [current]
+            while current.parent_S is not None:
+                path_G.append(current.parent_G)
+                current = current.parent_G
+            path_G = [(item.row, item.column) for item in path_G]
+            print(path_G, "yyyyy")
+
+        # if (current_S in Q_goal) and (current_G in Q_start):
+        #     path = [item for item in path_G for item in path_S]
+        #     print(path)
+        #     return path
+
+        # enqueueing children from the start direction
+        children_S = [junct(row_S + 1, column_S, current_S), junct(row_S - 1, column_S, current_S),
+                      junct(row_S, column_S + 1, current_S), junct(row_S, column_S - 1, current_S)]
+        for child in children_S:
+            if not is_out_of_bounds(child.row, child.column):
+                if child not in visited:
+                    if get_value(map_maze, child.row, child.column) != 'x':
+                        Q_start.append(child)
+                        visited.append(child)
+
+        # enqueueing children from the goal direction
+        # enqueueing children from the start direction
+        children_G = [junct(row_G + 1, column_G, current_G), junct(row_G - 1, column_G, current_G),
+                      junct(row_G, column_G + 1, current_G), junct(row_G, column_G - 1, current_G)]
+        for child in children_G:
+            if not is_out_of_bounds(child.row, child.column):
+                if child not in visited:
+                    if get_value(map_maze, child.row, child.column) != 'x':
+                        Q_goal.append(child)
+                        visited.append(child)
+    print("no path")
+    return []
+
+# print("no path")
+# return []
+
+
+def for_BFS ():
+    check = False
+    table, cols = input("test1.txt")
+    xB = []
+    yB = []
+    for i in range(len(table)):
+        for j in range(cols):
+            if 'r' in table[i][j]:
+                xR, yR = i, j
+                check = True
+                break
+        if check: break
+    check = False
+
+    for i in range(len(table)):
+        for j in range(cols):
+            if 'b' in table[i][j]:
+                xB.append(i)
+                yB.append(j)
+                check = True
+                break
+        if check: break
+    start = (1, 0)
+    end = (0, 1)
+    path_directions = []
+    for i in range(len(xB)):
+        path = bidirectional_bfs(table, xR, yR, xB[i], yB[i])
+        for j in range(len(path) - 1):
+            if path[j][0] == path[j + 1][0]:
+                if path[j][1] > path[j + 1][1]:
+                    path_directions.append("L")
+                else:
+                    path_directions.append("R")
+            elif path[j][1] == path[j][1]:
+                if path[j][0] > path[j + 1][0]:
+                    path_directions.append("U")
+                else:
+                    path_directions.append("D")
+        print(*path_directions, sep=" ")
+
 if __name__ == '__main__':
     # table, cols = input("test1.txt")
     # map_IDS(table, cols)
-    main()
+    for_BFS()
+    # main()
+
