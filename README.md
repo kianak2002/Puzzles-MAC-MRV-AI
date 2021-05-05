@@ -1,125 +1,158 @@
 # Intelligent
-from collections import defaultdict
-
-class Graph:
-    def __init__(self, vertices):
-        self.V = vertices
-        self.graph = defaultdict(list)
-
-    def addEdge(self, u, v):
-        self.graph[u].append(v)
-
 def input(address):
     text = open(address, "r")
     rows, cols = map(int, text.readline().split())
     table = [text.readline().split() for j in range(rows)]
-    print(table)
     return table, cols
 
-
-def map_IDS(g, table, cols, typeStart, typeTarget):
+def start_destination(table, cols, typeStart, typeTarget):
+    # xHead, yHead, xTarget, yTarget =0, 0, 0, 0
     for i in range(len(table)):
-        for j in range (cols):
-                if ('r' in table[i][j] and typeStart == 'r') or ('b' in table[i][j] and typeStart == 'b'):
-                    xHead , yHead = i, j
-                if ('b' in table[i][j] and typeTarget == 'b') or ('p' in table[i][j] and typeTarget == 'p'):
-                    xTarget , yTarget = i, j
-    # g = Graph(len(table)*cols)
+        for j in range(cols):
+            if ('r' in table[i][j] and typeStart == 'r') or ('b' in table[i][j] and typeStart == 'b'):
+                xHead, yHead = i, j
+            if ('b' in table[i][j] and typeTarget == 'b') or ('p' in table[i][j] and typeTarget == 'p'):
+                xTarget, yTarget = i, j
+    return xHead, yHead, xTarget, yTarget
+
+def IDS_R_To_B(table, cols, xHead, yHead, xTarget, yTarget):
     explored, frontier = [], []
-    frontier.append(xHead * cols +yHead)
-    while len(frontier) >0:
-        # print('1', node)
-        # if target == frontier[0]:
-        #     print('you found the goal')
-        #     print(g.graph)
-        xNode, yNode = int(frontier[0]/cols), frontier[0]%cols
-        # print(xDis, yDis)
-        if 0 < xNode < len(table) and ((xNode - 1) * cols + yNode) not in explored:       #up
-            # print(1,'          ', xDis-1, yDis)
-            if xNode-1 == xTarget and yNode==yTarget:
-                g.addEdge(xNode * cols + yNode, (xNode - 1) * cols + yNode)
-                # print('you found the goal')
-                return g, (xNode - 1) * cols + yNode
-            # else:
-            elif 'x' not in table[xNode-1][yNode]:
-                g.addEdge(xNode * cols + yNode, (xNode - 1) * cols + yNode)
+    child = dict()
+    frontier.append(xHead * cols + yHead)
+    while len(frontier) > 0:
+        xNode, yNode = int(frontier[0] / cols), frontier[0] % cols
+
+        if 0 < xNode < len(table) and ((xNode - 1) * cols + yNode) not in explored:  # up
+            if xNode - 1 == xTarget and yNode == yTarget:
+                child[(xNode - 1) * cols + yNode] = xNode * cols + yNode
+                return child
+            elif 'x' not in table[xNode - 1][yNode]:
+                child[(xNode - 1) * cols + yNode] = xNode * cols + yNode
                 if ((xNode - 1) * cols + yNode) not in frontier:
                     frontier.append((xNode - 1) * cols + yNode)
-        if 0 <= xNode < len(table)-1 and ((xNode + 1) * cols + yNode) not in explored:  # down
-            # print(2,'          ', xDis+1, yDis)
-            if xNode+1 == xTarget and yNode==yTarget:
-                g.addEdge(xNode * cols + yNode, (xNode + 1) * cols + yNode)
-                # print('you found the goal')
-                return g, (xNode + 1) * cols + yNode
-            # else:
+
+        if 0 <= xNode < len(table) - 1 and ((xNode + 1) * cols + yNode) not in explored:  # down
+            if xNode + 1 == xTarget and yNode == yTarget:
+                child[(xNode + 1) * cols + yNode] = xNode * cols + yNode
+                return child
             elif 'x' not in table[xNode + 1][yNode]:
-                g.addEdge(xNode * cols + yNode, (xNode + 1) * cols + yNode)
+                child[(xNode + 1) * cols + yNode] = xNode * cols + yNode
                 if ((xNode + 1) * cols + yNode) not in frontier:
                     frontier.append((xNode + 1) * cols + yNode)
-        if 0 < yNode < cols and (xNode * cols + yNode - 1) not in explored:       #left
-            # print(3,'          ', xDis, yDis-1)
-            if xNode == xTarget and yNode-1==yTarget:
-                g.addEdge(xNode * cols + yNode, xNode * cols + yNode-1)
-                # print('you found the goal')
-                return g, xNode* cols + yNode-1
-            # else:
-            elif 'x' not in table[xNode][yNode-1]:
-                g.addEdge(xNode * cols + yNode, xNode * cols + yNode-1)
+
+        if 0 < yNode < cols and (xNode * cols + yNode - 1) not in explored:  # left
+            if xNode == xTarget and yNode - 1 == yTarget:
+                child[xNode * cols + yNode - 1] = xNode * cols + yNode
+                return child
+            elif 'x' not in table[xNode][yNode - 1]:
+                child[xNode * cols + yNode - 1] = xNode * cols + yNode
                 if (xNode * cols + yNode - 1) not in frontier:
                     frontier.append(xNode * cols + yNode - 1)
-        if 0 <= yNode < cols-1 and (xNode * cols + yNode + 1) not in explored:        #right
-            # print(4,'          ', xDis, yDis+1)
-            if xNode == xTarget and yNode+1==yTarget:
-                g.addEdge(xNode * cols + yNode, xNode * cols + yNode + 1)
-                # print('you found the goal')
-                return g, xNode * cols + yNode+1
-            # else:
-            elif 'x' not in table[xNode][yNode+1]:
-                g.addEdge(xNode * cols + yNode, xNode * cols + yNode+1)
+
+        if 0 <= yNode < cols - 1 and (xNode * cols + yNode + 1) not in explored:          # right
+            if xNode == xTarget and yNode + 1 == yTarget:
+                child[xNode * cols + yNode + 1] = xNode * cols + yNode
+                return child
+            elif 'x' not in table[xNode][yNode + 1]:
+                child[xNode * cols + yNode + 1] = xNode * cols + yNode
                 if (xNode * cols + yNode + 1) not in frontier:
                     frontier.append(xNode * cols + yNode + 1)
+
         if (xNode * cols + yNode) not in explored:
             explored.append(xNode * cols + yNode)
         frontier.remove(xNode * cols + yNode)
-        # print('explored', explored)
-        # print('frontier', frontier)
-    # print(g.graph)
-    return g, -1
-    # print(g.graph)
+    return -1
 
-def Path_IDS(g, target):
 
-    key_list = list(g.graph.keys())
-    val_list = list(g.graph.values())
-    path = []
-    # print(key_list)
-    # print(val_list)
-    # print(target)
-    # goal = target
+
+def IDS_B_To_P(table, cols, xNode, yNode, xTarget, yTarget):
+    explored, frontier = [], []
+    child = dict()
+    frontier.append(xNode * cols + yNode)
+    while len(frontier) > 0:
+        xNode, yNode = int(frontier[0] / cols), frontier[0] % cols
+        # print(table[xNode-1][yNode], xNode-1)
+        if 0 < xNode < len(table)-1 and ((xNode - 1) * cols + yNode) not in explored and \
+                table[xNode+1][yNode] != 'x' and IDS_R_To_B(table, cols, xNode-1, yNode, xNode+1, yNode) != -1:  # up
+            if xNode - 1 == xTarget and yNode == yTarget:
+                child[(xNode - 1) * cols + yNode] = xNode * cols + yNode
+                return child
+            elif table[xNode - 1][yNode] != 'x':
+                child[(xNode - 1) * cols + yNode] = xNode * cols + yNode
+                if ((xNode - 1) * cols + yNode) not in frontier:
+                    frontier.append((xNode - 1) * cols + yNode)
+
+        if 0 < xNode < len(table) - 1 and ((xNode + 1) * cols + yNode) not in explored and \
+                table[xNode-1][yNode] != 'x' and IDS_R_To_B(table, cols, xNode+1, yNode, xNode-1, yNode) != -1:  # down
+            if xNode + 1 == xTarget and yNode == yTarget:
+                child[(xNode + 1) * cols + yNode] = xNode * cols + yNode
+                return child
+            elif 'x' not in table[xNode + 1][yNode]:
+                child[(xNode + 1) * cols + yNode] = xNode * cols + yNode
+                if ((xNode + 1) * cols + yNode) not in frontier:
+                    frontier.append((xNode + 1) * cols + yNode)
+
+        if 0 < yNode < cols-1 and (xNode * cols + yNode - 1) not in explored and \
+                table[xNode][yNode+1] != 'x' and IDS_R_To_B(table, cols, xNode, yNode-1, xNode, yNode+1) != -1:  # left
+            if xNode == xTarget and yNode - 1 == yTarget:
+                child[xNode * cols + yNode - 1] = xNode * cols + yNode
+                return child
+            elif 'x' not in table[xNode][yNode - 1]:
+                child[xNode * cols + yNode - 1] = xNode * cols + yNode
+                if (xNode * cols + yNode - 1) not in frontier:
+                    frontier.append(xNode * cols + yNode - 1)
+
+        if 0 < yNode < cols - 1 and (xNode * cols + yNode + 1) not in explored \
+                and table[xNode][yNode-1] != 'x' and IDS_R_To_B(table, cols, xNode, yNode+1, xNode, yNode-1) != -1:   # right
+            if xNode == xTarget and yNode + 1 == yTarget:
+                child[xNode * cols + yNode + 1] = xNode * cols + yNode
+                return child
+            elif 'x' not in table[xNode][yNode + 1]:
+                child[xNode * cols + yNode + 1] = xNode * cols + yNode
+                if (xNode * cols + yNode + 1) not in frontier:
+                    frontier.append(xNode * cols + yNode + 1)
+
+        if (xNode * cols + yNode) not in explored:
+            explored.append(xNode * cols + yNode)
+        frontier.remove(xNode * cols + yNode)
+    return -1
+
+def Path_IDS(childs, start, target, path):
     path.append(target)
-    for i in range (len(key_list)-1, -1, -1):
-        # print(val_list[i])
-        for j in range (len(val_list[i])):
-            if target == val_list[i][j]:
-                # path.append(target)
-                path.append(key_list[i])
-                target = key_list[i]
-                # print(target)
-    # path.append(goal)
-    print('path', path)
+    while True:
+        path.append(childs.get(target))
+        if start != childs.get(target):
+            target = childs.get(target)
+        else:
+            return path
 
-
-
-
+def R_to_B(path, cols):
+    path.reverse()
+    print(path)
+    # for i in range (len(path)-2, -1, -1):
+    for i in range (1, len(path)-1):
+        if path[i+1] == path[i]+cols:
+            print('D', end=' ')
+        if path[i+1] == path[i]-cols:
+            print('U', end=' ')
+        if path[i+1] == path[i]+ 1:
+            print('R', end=' ')
+        if path[i+1] == path[i]-1:
+            print('L', end=' ')
 
 
 
 if __name__ == '__main__':
-    table, cols = input("test6.txt")
-    g = Graph(len(table) * cols)
-    g, target = map_IDS(g, table, cols, 'r', 'b')
-    if target == -1:
+    table, cols = input("test7.txt")
+    xHead, yHead, xTarget, yTarget = start_destination(table, cols, 'b', 'p')
+    print(xHead, yHead, xTarget, yTarget)
+    child = IDS_B_To_P(table, cols, xHead, yHead, xTarget, yTarget)
+    print(child)
+    # start, target, child = map_IDS(table, cols, xHead, yHead, xTarget, yTarget, 'b')
+    if child == -1:
         print('path in not reachable')
+        exit(0)
     else:
-        print(g.graph, target)
-        
+        path = []
+        path = Path_IDS(child, xHead*cols + yHead, xTarget*cols + yTarget, path)
+        print(path)
