@@ -8,7 +8,6 @@ class Node():
         self.parent = parent
         self.position = position
         self.robot_path = []
-
         self.g = 0
         self.h = 0
         self.f = 0
@@ -66,7 +65,8 @@ def input(address):
 
 
 '''
-find the path from r to all the butters!! and print the path
+find the correct path for butter
+we call the A_star_again so that it gives path for robot
 '''
 
 def A_star(start, end, table, cols, robot, robot_paths, parents, for_robot=False):
@@ -141,10 +141,12 @@ def A_star(start, end, table, cols, robot, robot_paths, parents, for_robot=False
                 continue
 
             # Create the f, g, and h values
-            if 'r' in maze[int(child.position[0])][int(child.position[1])] or 'b' in maze[int(child.position[0])][
-                int(child.position[1])] \
-                    or 'p' in maze[int(child.position[0])][int(child.position[1])]:
-                child.g = 0
+            if 'r' in maze[int(child.position[0])][int(child.position[1])]:
+                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('r', ''))
+            elif 'b' in maze[int(child.position[0])][int(child.position[1])]:
+                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('b', ''))
+            elif 'p' in maze[int(child.position[0])][int(child.position[1])]:
+                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('p', ''))
             else:
                 child.g = current_node.g + int(maze[int(child.position[0])][int(child.position[1])])
 
@@ -169,7 +171,7 @@ def A_star(start, end, table, cols, robot, robot_paths, parents, for_robot=False
                     table_new = copy.deepcopy(table)
                     table_new[current[0]][current[1]] = 'x'
                     robot_path = A_star_again(robot_loc, previous, table_new, cols)
-                    # robot_path = A_star(robot_loc, previous, table, cols, robot, {}, {}, for_robot=True)
+
                     robot_path += [(current_node.position, [])]  # push
 
                     child.robot_path = robot_path
@@ -227,11 +229,12 @@ def A_star_again(start, end, table, cols):
         # Found the goal
         if current_node == end_node:
             path = []
+            current = Node()
             current = current_node
             while current is not None:
                 path.append(current.position)
                 current = current.parent
-            return path[::-1] # Return reversed path
+            return path[::-1]# Return reversed path
 
         # Generate children
         children = []
@@ -262,10 +265,12 @@ def A_star_again(start, end, table, cols):
                 continue
 
             # Create the f, g, and h values
-            if 'r' in maze[int(child.position[0])][int(child.position[1])] or 'b' in maze[int(child.position[0])][
-                int(child.position[1])] \
-                    or 'p' in maze[int(child.position[0])][int(child.position[1])]:
-                child.g = 0
+            if 'r' in maze[int(child.position[0])][int(child.position[1])]:
+                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('r', ''))
+            elif 'b' in maze[int(child.position[0])][int(child.position[1])]:
+                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('b', ''))
+            elif 'p' in maze[int(child.position[0])][int(child.position[1])]:
+                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('p', ''))
             else:
                 child.g = current_node.g + int(maze[int(child.position[0])][int(child.position[1])])
 
@@ -282,7 +287,7 @@ def A_star_again(start, end, table, cols):
             open_list.append(child)
 
 def main():
-    with open("test3.txt", "r") as file:
+    with open("test5.txt", "r") as file:
         env = environment(file)
     cols, table, people, butters, robot = env.map()
     print(cols, table)
@@ -291,15 +296,21 @@ def main():
         actions = []
         butter = butters[i]
         person = people[i]
-
+        cheat_path = []
         robot_paths = {}
         parents = {}
+        cost = 0
 
         path = A_star(butter, person, table, cols, robot, robot_paths, parents)
         all_path.append(path)
+        ##if there is no way !
+        if all_path == [[]]:
+            print("NO WAY!")
+            continue
+
         robot = path[-1][-1][-1][0] ##update the robot location
 
-        print(f'From {butter} to {person} goes like:')
+        print(f'Butter From {butter} to {person} goes like:')
         for sec in path:
             for i in range(len(sec[1]) - 1):
                 compare_x = sec[1][i][0]
@@ -310,6 +321,11 @@ def main():
                 else:
                     compared_x = sec[1][i+1][0]
                     compared_y = sec[1][i + 1][1]
+
+                if i != 0:
+                    cheat_path.append((compare_x, compare_y))
+                if i == len(sec[1]) - 2:
+                    cheat_path.append((compared_x, compared_y))
                 if compare_x - compared_x == 0:
                     if compare_y - compared_y == 1:
                         actions.append("L")
@@ -320,8 +336,19 @@ def main():
                         actions.append("U")
                     elif compare_x - compared_x == -1:
                         actions.append("D")
+        print("path:", cheat_path)
         print(actions)
-
+        print("goal depth:",len(actions))
+        for j in range(len(cheat_path)):
+            if 'r' in table[cheat_path[j][0]][cheat_path[j][1]]:
+                cost += int(table[cheat_path[j][0]][cheat_path[j][1]].replace('r', ''))
+            elif 'b' in table[cheat_path[j][0]][cheat_path[j][1]]:
+                cost += int(table[cheat_path[j][0]][cheat_path[j][1]].replace('b', ''))
+            elif 'p' in table[cheat_path[j][0]][cheat_path[j][1]]:
+                cost += int(table[cheat_path[j][0]][cheat_path[j][1]].replace('p', ''))
+            else:
+                cost += int(table[cheat_path[j][0]][cheat_path[j][1]])
+        print("cost:",cost)
 if __name__ == '__main__':
     main()
 
