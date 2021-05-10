@@ -1,380 +1,217 @@
-from collections import defaultdict
-
-class Graph:
-    def __init__(self, vertices):
-        self.V = vertices
-        self.graph = defaultdict(list)
-
-    def addEdge(self, u, v):
-        self.graph[u].append(v)
-
-def input(address):
-    text = open(address, "r")
-    rows, cols = map(int, text.readline().split())
-    table = [text.readline().split() for j in range(rows)]
-    print(table)
-    return table, cols
-
-
-def map_IDS(table, cols):
-    check = False
-    for i in range(len(table)):
-        for j in range (cols):
-                if 'r' in table[i][j]:
-                    xR , yR = i, j
-                    check = True
-                    break
-        if check : break
-    g = Graph(len(table)*cols)
-    explored, frontier = [], []
-    frontier.append(xR * cols +yR)
-    while len(frontier) >0:
-        # print('1', node)
-        xDis, yDis = int(frontier[0]/cols), frontier[0]%cols
-        # print(xDis, yDis)
-        if 0 < xDis < len(table) and ((xDis - 1) * cols + yDis) not in explored:       #up
-            # print(1,'          ', xDis-1, yDis)
-            g.addEdge(xDis * cols + yDis, (xDis - 1) * cols + yDis)
-            if ((xDis - 1) * cols + yDis) not in frontier:
-                frontier.append((xDis - 1) * cols + yDis)
-        if 0 <= xDis < len(table)-1 and ((xDis + 1) * cols + yDis) not in explored:  # down
-            # print(2,'          ', xDis+1, yDis)
-            g.addEdge(xDis * cols + yDis, (xDis + 1) * cols + yDis)
-            if ((xDis + 1) * cols + yDis) not in frontier:
-                frontier.append((xDis + 1) * cols + yDis)
-        if 0 < yDis < cols and (xDis * cols + yDis - 1) not in explored:       #left
-            # print(3,'          ', xDis, yDis-1)
-            g.addEdge(xDis * cols + yDis, xDis * cols + yDis-1)
-            if (xDis * cols + yDis - 1) not in frontier:
-                frontier.append(xDis * cols + yDis - 1)
-        if 0 <= yDis < cols-1 and (xDis * cols + yDis + 1) not in explored:        #right
-            # print(4,'          ', xDis, yDis+1)
-            g.addEdge(xDis * cols + yDis, xDis * cols + yDis+1)
-            if (xDis * cols + yDis + 1) not in frontier:
-                frontier.append(xDis * cols + yDis + 1)
-        if (xDis * cols + yDis) not in explored:
-            explored.append(xDis * cols + yDis)
-        frontier.remove(xDis * cols + yDis)
-        print('explored', explored)
-        print('frontier', frontier)
-
-    print(g.graph)
-
-
-
-
-
-
-
-
-class Node():
-    """A node class for A* Pathfinding"""
-
-    def __init__(self, parent=None, position=None):
+import numpy as np
+class node():
+    def __init__(self, parent, robot, butter, action_from_par):
         self.parent = parent
-        self.position = position
+        self.robot = robot
+        self.butter = butter
+        self.action_from_par = action_from_par
 
-        self.g = 0
-        self.h = 0
-        self.f = 0
+class environment():
+    def __init__(self, map_file):
+        self.rows, self.cols = map(int, map_file.readline().split())
+        self.table = [map_file.readline().split() for j in range(self.rows)]
 
-    def __eq__(self, other):
-        return self.position == other.position
+    def find_people(self):
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if 'p' in self.table[i][j]:
+                    return i, j
 
-'''
-find the path from r to all the butters!! and print the path
-'''
-def A_star(start, end, table, cols):
-    """Returns a list of tuples as a path from the given start to the given end in the given maze"""
-    maze = table
-    # Create start and end node
-    start_node = Node(None, start)
-    start_node.g = start_node.h = start_node.f = 0
-    end_node = Node(None, end)
-    end_node.g = end_node.h = end_node.f = 0
+    def find_robot(self):
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if 'r' in self.table[i][j]:
+                    return i, j
 
-    # Initialize both open and closed list
-    open_list = []
-    closed_list = []
+    def find_butter(self):
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if 'b' in self.table[i][j]:
+                    return i, j
 
-    # Add the start node
-    open_list.append(start_node)
+    def find_obstables(self):
+        self.obstacle_list = []
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if 'x' in self.table[i][j]:
+                    self.obstacle_list.append((i, j))
 
-    # Loop until you find the end
-    while len(open_list) > 0:
-
-        # Get the current node
-        current_node = open_list[0]
-        current_index = 0
-        for index, item in enumerate(open_list):
-            if item.f < current_node.f:
-                current_node = item
-                current_index = index
-
-        # Pop current off open list, add to closed list
-        open_list.pop(current_index)
-        closed_list.append(current_node)
-
-        # Found the goal
-        if current_node == end_node:
-            path = []
-            current = current_node
-            while current is not None:
-                path.append(current.position)
-                current = current.parent
-            return path[::-1] # Return reversed path
-
-        # Generate children
-        children = []
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]: # Adjacent squares
-
-            # Get node position
-            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
-
-            # Make sure within range
-            if node_position[0] > (len(maze) - 1) or node_position[0] < 0 or node_position[1] > (len(maze[len(maze)-1]) -1) or node_position[1] < 0:
-                continue
-
-            # Make sure walkable terrain
-            if maze[node_position[0]][node_position[1]] == 'x':
-                continue
-
-            # Create new node
-            new_node = Node(current_node, node_position)
-
-            # Append
-            children.append(new_node)
-
-        # Loop through children
-        for child in children:
-
-            # Child is on the closed list
-            for closed_child in closed_list:
-                if child == closed_child:
-                    continue
-
-            # Create the f, g, and h values
-            child.g = current_node.g + 1
-            # child.h = ((child.position[0] - end_node.position[0]) ** 2) + ((child.position[1] - end_node.position[1]) ** 2)
-            if 'r' in maze[int(child.position[0])][int(child.position[1])] or 'b' in maze[int(child.position[0])][int(child.position[1])]:
-                child.h = 0
+    def available_actions(self, robot, butter):
+        actions = []
+        if robot[0] - 1 >= 0 and self.table[robot[0] - 1][robot[1]] != "x":
+            if butter == (robot[0] - 1, robot[1]):
+                if robot[0] - 2 >= 0 and self.table[robot[0] - 2][robot[1]] != "x":
+                    actions.append("U")
             else:
-                child.h = int(maze[int(child.position[0])][int(child.position[1])])
-            child.f = child.g + child.h
+                actions.append("U")
 
-            # Child is already in the open list
-            for open_node in open_list:
-                if child == open_node and child.g > open_node.g:
-                    continue
+        if robot[0] + 1 < self.rows and self.table[robot[0] + 1][robot[1]] != "x":
+            if butter == (robot[0] + 1, robot[1]):
+                if robot[0] + 2 < self.rows and self.table[robot[0] + 2][robot[1]] != "x":
+                    actions.append("D")
+            else:
+                actions.append("D")
 
-            # Add the child to the open list
-            open_list.append(child)
+        if robot[1] - 1 >= 0 and self.table[robot[0]][robot[1] - 1] != "x":
+            if butter == (robot[0], robot[1] - 1):
+                if robot[1] - 2 >= 0 and self.table[robot[0]][robot[1] - 2] != "x":
+                    actions.append("L")
+            else:
+                actions.append("L")
 
+        if robot[1] + 1 < self.cols and self.table[robot[0]][robot[1] + 1] != "x":
+            if butter == (robot[0], robot[1] + 1):
+                if robot[1] + 2 < self.cols and self.table[robot[0]][robot[1] + 2] != "x":
+                    actions.append("R")
+            else:
+                actions.append("R")
+        return actions
 
-def main():
-    check = False
-    table, cols = input("test1.txt")
-    xB = []
-    yB = []
-    for i in range(len(table)):
-        for j in range(cols):
-            if 'r' in table[i][j]:
-                xR, yR = i, j
-                check = True
+    def step(self, robot, butter, action):
+        # action : "U", "D", "R", "L"
+        # robot: tuple (x, y)
+        if action not in self.available_actions(robot, butter):
+            raise ValueError("action is not available")
+
+        if action == "U":
+            next_robot = robot[0] - 1, robot[1]
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0] - 1, butter[1]
+            return next_robot, butter, int(cost)
+
+        elif action == "D":
+            next_robot = robot[0] + 1, robot[1]
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0] + 1, butter[1]
+            return next_robot, butter, int(cost)
+
+        elif action == "L":
+            next_robot = robot[0], robot[1] - 1
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0], butter[1] - 1
+            return next_robot, butter, int(cost)
+
+        elif action == "R":
+            next_robot = robot[0], robot[1] + 1
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0], butter[1] + 1
+            return next_robot, butter, int(cost)
+
+        else:
+            raise ValueError("action is wrong")
+
+class agent():
+    def __init__(self, env):
+        self.env = env
+        self.butter = env.find_butter()
+        self.robot = env.find_robot()
+        self.people = env.find_people()
+
+    def bfs(self):
+        queue = []
+        root = node(None, self.robot, self.butter, None)
+        queue.append(root)
+        while True:
+            n = queue.pop(0)
+            if n.butter == self.people:
+                self.show_path(n)
                 break
-        if check: break
-    check = False
+            actions = env.available_actions(n.robot, n.butter)
+            for a in actions:
+                next_robot, next_butter, _ = env.step(n.robot, n.butter, a)
+                child = node(n, next_robot, next_butter, a)
+                queue.append(child)
 
-    for i in range(len(table)):
-        for j in range(cols):
-            if 'b' in table[i][j]:
-                xB.append(i)
-                yB.append(j)
-                check = True
+    def bidirectional_bfs(self):
+        queue_r = []
+        queue_p = []
+        is_visited_r = {}
+        is_visited_p = {}
+        root_r = node(None, self.robot, self.butter, None)
+        queue_r.append(root_r)
+
+        actions = env.available_actions(self.people, self.people)
+        for a in actions:
+            next_robot, next_butter, _ = env.step(self.people, self.people, a)
+            child = node(None, robot=next_robot, butter=self.people, action_from_par=None)
+            queue_p.append(child)
+
+        while True:
+            node_r = queue_r.pop(0)
+            node_p = queue_p.pop(0)
+            is_visited_r[node_r.robot+node_r.butter] = node_r
+            is_visited_p[node_p.robot+node_p.butter] = node_p
+            # print(node_r.robot, node_r.butter, node_r.action_from_par, node_p.robot, node_p.butter, node_p.action_from_par)
+            if node_r.robot + node_r.butter in is_visited_p.keys():
+                self.show_bidirectional_path(node_r, is_visited_p[node_r.robot+node_r.butter])
                 break
-        if check: break
-    start = (1, 0)
-    end = (0, 1)
-    path_directions = []
-    for i in range(len(xB)):
-        start = (xR, yR)
-        end = (xB[i], yB[i])
-        path = A_star(start, end, table, cols)
-        for j in range(len(path) - 1):
-            if path[j][0] == path[j+1][0]:
-                if path[j][1] > path[j+1][1]:
-                    path_directions.append("L")
-                else:
-                    path_directions.append("R")
-            elif path[j][1] == path[j][1]:
-                if path[j][0] > path[j+1][0]:
-                    path_directions.append("U")
-                else:
-                    path_directions.append("D")
-        print(path)
-        print(*path_directions, sep=" ")
-
-class Node_bfs():
-    """A node class for A* Pathfinding"""
-
-    def __init__(self, parent=None, position=None, visited=False, dist=0):
-        self.parent = parent
-        self.position = position
-        self.visited = visited
-        self.dist = dist
-
-    def __eq__(self, other):
-        return self.position == other.position
-
-
-
-
-
-class junct():
-    def __init__(self, row, column, parent_S):
-        self.row = row
-        self.column = column
-        self.parent_S = parent_S
-        # self.parent_G = parent_G
-
-    def __eq__(self, other):
-        return (self.row == other.row and self.column == other.column)
-
-
-def bidirectional_bfs(map_maze, start_x, start_y, end_x, end_y):
-    def get_value(maze, a, b):
-        return maze[a][b]
-
-    def is_out_of_bounds(a, b):
-        return (a < 0 or a > len(map_maze)-1) or (b < 0 or b > (len(map_maze[len(map_maze)-1]) -1))
-
-    # grid = self.grid
-    # dim = len(grid)
-    Q_start = []
-    Q_goal = []
-    visited = []
-    start = junct(start_x, start_y, None)
-    goal = junct(end_x, end_y, None)
-    Q_start.append(start)
-    Q_goal.append(goal)
-    visited.append(start)
-    visited.append(goal)
-
-    # beginning loop
-    while (len(Q_start) > 0) and (len(Q_goal) > 0):
-        # initializations
-        current_S = Q_start[0]
-        current_G = Q_goal[0]
-
-        row_S = current_S.row
-        column_S = current_S.column
-
-        row_G = current_G.row
-        column_G = current_G.column
-
-        # some mechanics
-        if len(Q_start) > 0:
-            Q_start.pop(0)
-        if len(Q_goal) > 0:
-            Q_goal.pop(0)
-
-        # in case the current node from starting is in the goal Queue
-        if (current_S in Q_goal):
-            # forming the path back to G
-            current = current_S
-            path_S = [current]
-            while current.parent_S is not None:
-                path_S.append(current.parent_S)
-                current = current.parent_S
-            path_S = [(item.row, item.column) for item in path_S]
-            print(path_S, "xxxxx")
-
-        # in case the current node from goal is in the start Queue
-        if (current_G in Q_start):
-            # forming the path back to S
-            current = current_G
-            path_G = [current]
-            while current.parent_S is not None:
-                path_G.append(current.parent_G)
-                current = current.parent_G
-            path_G = [(item.row, item.column) for item in path_G]
-            print(path_G, "yyyyy")
-
-        # if (current_S in Q_goal) and (current_G in Q_start):
-        #     path = [item for item in path_G for item in path_S]
-        #     print(path)
-        #     return path
-
-        # enqueueing children from the start direction
-        children_S = [junct(row_S + 1, column_S, current_S), junct(row_S - 1, column_S, current_S),
-                      junct(row_S, column_S + 1, current_S), junct(row_S, column_S - 1, current_S)]
-        for child in children_S:
-            if not is_out_of_bounds(child.row, child.column):
-                if child not in visited:
-                    if get_value(map_maze, child.row, child.column) != 'x':
-                        Q_start.append(child)
-                        visited.append(child)
-
-        # enqueueing children from the goal direction
-        # enqueueing children from the start direction
-        children_G = [junct(row_G + 1, column_G, current_G), junct(row_G - 1, column_G, current_G),
-                      junct(row_G, column_G + 1, current_G), junct(row_G, column_G - 1, current_G)]
-        for child in children_G:
-            if not is_out_of_bounds(child.row, child.column):
-                if child not in visited:
-                    if get_value(map_maze, child.row, child.column) != 'x':
-                        Q_goal.append(child)
-                        visited.append(child)
-    print("no path")
-    return []
-
-# print("no path")
-# return []
-
-
-def for_BFS ():
-    check = False
-    table, cols = input("test1.txt")
-    xB = []
-    yB = []
-    for i in range(len(table)):
-        for j in range(cols):
-            if 'r' in table[i][j]:
-                xR, yR = i, j
-                check = True
+            if node_p.robot + node_p.butter in is_visited_r.keys():
+                self.show_bidirectional_path(is_visited_r[node_p.robot+node_p.butter], node_p)
                 break
-        if check: break
-    check = False
+            actions = env.available_actions(node_r.robot, node_r.butter)
+            for a in actions:
+                next_robot, next_butter, _ = env.step(node_r.robot, node_r.butter, a)
+                if next_robot + next_butter not in is_visited_r.keys():
+                    child = node(node_r, next_robot, next_butter, a)
+                    queue_r.append(child)
 
-    for i in range(len(table)):
-        for j in range(cols):
-            if 'b' in table[i][j]:
-                xB.append(i)
-                yB.append(j)
-                check = True
-                break
-        if check: break
-    start = (1, 0)
-    end = (0, 1)
-    path_directions = []
-    for i in range(len(xB)):
-        path = bidirectional_bfs(table, xR, yR, xB[i], yB[i])
-        for j in range(len(path) - 1):
-            if path[j][0] == path[j + 1][0]:
-                if path[j][1] > path[j + 1][1]:
-                    path_directions.append("L")
-                else:
-                    path_directions.append("R")
-            elif path[j][1] == path[j][1]:
-                if path[j][0] > path[j + 1][0]:
-                    path_directions.append("U")
-                else:
-                    path_directions.append("D")
-        print(*path_directions, sep=" ")
+            actions = env.available_actions(robot=node_p.robot, butter=node_p.butter)
+            for a in actions:
+                next_robot, next_butter, _ = env.step(robot=node_p.robot, butter=node_p.butter, action=a)
+                if next_robot + next_butter not in is_visited_p.keys():
+                    child = node(node_p, next_robot, next_butter, a)
+                    queue_p.append(child)
 
-if __name__ == '__main__':
-    # table, cols = input("test1.txt")
-    # map_IDS(table, cols)
-    for_BFS()
-    # main()
+    def show_path(self, final_node):
+        n = final_node
+        print("****")
+        print(n.robot, n.action_from_par)
+        while n != None:
+            n = n.parent
+            print(n.robot, n.action_from_par)
 
+    def show_bidirectional_path(self, final_node_r, final_node_p):
+        n = final_node_r
+        print("****")
+        print(n.robot, n.butter, n.action_from_par)
+        while n.parent != None:
+            n = n.parent
+            print(n.robot, n.butter, n.action_from_par)
+
+        n = final_node_p
+        print(n.robot, n.butter, n.action_from_par)
+        while n.parent != None:
+            n = n.parent
+            print(n.robot, n.butter, n.action_from_par)
+
+    def inv(self, action):
+        if action == "U":
+            return "D"
+        if action == "D":
+            return "U"
+        if action == "R":
+            return "L"
+        if action == "L":
+            return "R"
+
+if __name__ == "__main__":
+    with open("test4.txt", "r") as file:
+        env = environment(file)
+    test_agent = agent(env)
+    test_agent.bidirectional_bfs()
