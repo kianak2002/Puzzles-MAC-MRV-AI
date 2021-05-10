@@ -287,7 +287,7 @@ def A_star_again(start, end, table, cols):
             open_list.append(child)
 
 def main():
-    with open("test5.txt", "r") as file:
+    with open("test3.txt", "r") as file:
         env = environment(file)
     cols, table, people, butters, robot = env.map()
     print(cols, table)
@@ -309,8 +309,8 @@ def main():
             continue
 
         robot = path[-1][-1][-1][0] ##update the robot location
-
         print(f'Butter From {butter} to {person} goes like:')
+        last = None
         for sec in path:
             for i in range(len(sec[1]) - 1):
                 compare_x = sec[1][i][0]
@@ -321,8 +321,7 @@ def main():
                 else:
                     compared_x = sec[1][i+1][0]
                     compared_y = sec[1][i + 1][1]
-
-                if i != 0:
+                if last != (compare_x, compare_y):
                     cheat_path.append((compare_x, compare_y))
                 if i == len(sec[1]) - 2:
                     cheat_path.append((compared_x, compared_y))
@@ -336,6 +335,7 @@ def main():
                         actions.append("U")
                     elif compare_x - compared_x == -1:
                         actions.append("D")
+                last = cheat_path[-1]
         print("path:", cheat_path)
         print(actions)
         print("goal depth:",len(actions))
@@ -349,6 +349,8 @@ def main():
             else:
                 cost += int(table[cheat_path[j][0]][cheat_path[j][1]])
         print("cost:",cost)
+
+
 if __name__ == '__main__':
     main()
 
