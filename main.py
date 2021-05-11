@@ -243,20 +243,19 @@ class agent():
             node_p = queue_p.pop(0)
             is_visited_r[node_r.robot + node_r.butter] = node_r
             is_visited_p[node_p.robot + node_p.butter] = node_p
-            # print(node_r.robot, node_r.butter, node_r.action_from_par, node_p.robot, node_p.butter, node_p.action_from_par)
             if node_r.robot + node_r.butter in is_visited_p.keys():
-                self.show_bidirectional_path(node_r, is_visited_p[node_r.robot + node_r.butter])
+                action_path, path = self.show_bidirectional_path(node_r, is_visited_p[node_r.robot + node_r.butter])
                 n = is_visited_p[node_r.robot + node_r.butter]
                 while n.parent != None:
                     n = n.parent
-                return n.butter
+                return n.robot, action_path, path
                 # break
             if node_p.robot + node_p.butter in is_visited_r.keys():
-                self.show_bidirectional_path(is_visited_r[node_p.robot + node_p.butter], node_p)
+                action_path, path = self.show_bidirectional_path(is_visited_r[node_p.robot + node_p.butter], node_p)
                 n = node_p
                 while n.parent != None:
                     n = n.parent
-                return n.butter
+                return n.robot, action_path, path
                 # break
             actions = env.available_actions(node_r.robot, node_r.butter)
             for a in actions:
@@ -272,6 +271,8 @@ class agent():
                     child = node(node_p, next_robot, next_butter, a)
                     queue_p.append(child)
 
+
+
     def show_path(self, final_node):
         n = final_node
         print("****")
@@ -280,21 +281,28 @@ class agent():
             n = n.parent
             print(n.robot, n.action_from_par)
 
+
+
     def show_bidirectional_path(self, final_node_r, final_node_p):
+        path = []
+        action_path = []
         n = final_node_r
         print("****")
-        print(n.robot, n.butter, n.action_from_par)
         while n.parent != None:
+            path.append(n.robot)
+            action_path.append(n.action_from_par)
             n = n.parent
-            print(n.robot, n.butter, n.action_from_par)
-
+        path.append(n.robot)
+        path.reverse()
+        action_path.reverse()
         n = final_node_p
-        print(n.robot, n.butter, n.action_from_par)
         while n.parent != None:
+            action_path.append(self.inverse(n.action_from_par))
             n = n.parent
-            print(n.robot, n.butter, n.action_from_par)
+            path.append(n.robot)
+        return action_path, path
 
-    def inv(self, action):
+    def inverse(self, action):
         if action == "U":
             return "D"
         if action == "D":
@@ -310,11 +318,10 @@ if __name__ == "__main__":
         env = environment(file)
     people_list, butter_list = env.map()
     robot = env.find_robot()
-    print(people_list, butter_list)
     test_agent = agent(env)
-    print(len(butter_list))
     for i in range(len(butter_list)):
-        # print(robot)
-        robot = test_agent.bidirectional_bfs(people_list, butter_list[i], robot)
-        print(robot)
-    # test_agent.bidirectional_bfs()
+        robot,action_path, path = test_agent.bidirectional_bfs(people_list, butter_list[i], robot)
+        print("path:", path)
+        print("actions:", action_path)
+        print("cost:", len(action_path))
+        print("goal depth:", len(action_path))
