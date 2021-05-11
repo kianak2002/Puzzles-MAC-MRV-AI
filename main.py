@@ -1,19 +1,12 @@
-from collections import defaultdict
-import copy
+import numpy as np
 
-class Node():
-    """A node class for A* Pathfinding"""
 
-    def __init__(self, parent=None, position=None):
+class node():
+    def __init__(self, parent, robot, butter, action_from_par):
         self.parent = parent
-        self.position = position
-        self.robot_path = []
-        self.g = 0
-        self.h = 0
-        self.f = 0
-
-    def __eq__(self, other):
-        return self.position == other.position
+        self.robot = robot
+        self.butter = butter
+        self.action_from_par = action_from_par
 
 
 class environment():
@@ -21,19 +14,11 @@ class environment():
         self.rows, self.cols = map(int, map_file.readline().split())
         self.table = [map_file.readline().split() for j in range(self.rows)]
 
-        self.find_people()
-        self.find_butter()
-        self.robot = self.find_robot()
-
-    def map(self):
-        return self.cols, self.table, self.people_list, self.butter_list, self.robot
-
     def find_people(self):
-        self.people_list = []
         for i in range(self.rows):
             for j in range(self.cols):
                 if 'p' in self.table[i][j]:
-                    self.people_list.append((i, j))
+                    return i, j
 
     def find_robot(self):
         for i in range(self.rows):
@@ -42,11 +27,10 @@ class environment():
                     return i, j
 
     def find_butter(self):
-        self.butter_list = []
         for i in range(self.rows):
             for j in range(self.cols):
                 if 'b' in self.table[i][j]:
-                    self.butter_list.append((i, j))
+                    return i, j
 
     def find_obstables(self):
         self.obstacle_list = []
@@ -55,302 +39,257 @@ class environment():
                 if 'x' in self.table[i][j]:
                     self.obstacle_list.append((i, j))
 
-
-def input(address):
-    text = open(address, "r")
-    rows, cols = map(int, text.readline().split())
-    table = [text.readline().split() for j in range(rows)]
-    print(table)
-    return table, cols
-
-
-'''
-find the correct path for butter
-we call the A_star_again so that it gives path for robot
-'''
-
-def A_star(start, end, table, cols, robot, robot_paths, parents, for_robot=False):
-    """Returns a list of tuples as a path from the given start to the given end in the given maze"""
-    maze = table
-    # Create start and end node
-    start_node = Node(None, start)
-    start_node.g = start_node.h = start_node.f = 0
-    end_node = Node(None, end)
-    end_node.g = end_node.h = end_node.f = 0
-
-    # Initialize both open and closed list
-    open_list = []
-    closed_list = []
-
-    # Add the start node
-    open_list.append(start_node)
-
-    # Loop until you find the end
-    while len(open_list) > 0:
-
-        # Get the current node
-        current_node = open_list[0]
-        current_index = 0
-        for index, item in enumerate(open_list):
-            if item.f < current_node.f:
-                current_node = item
-                current_index = index
-
-        # Pop current off open list, add to closed list
-        open_list.pop(current_index)
-        closed_list.append(current_node)
-
-        # Found the goal
-        if current_node == end_node:
-            path = []
-            current = current_node
-
-            while current is not None:
-                path.append((current.position, current.robot_path))
-                current = current.parent
-            return path[::-1]  # Return reversed path
-
-        # Generate children
-        children = []
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]:  # Adjacent squares
-
-            # Get node position
-            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
-
-            # Make sure within range
-            if node_position[0] > (len(maze) - 1) or node_position[0] < 0 or node_position[1] > (
-                    len(maze[len(maze) - 1]) - 1) or node_position[1] < 0:
-                continue
-
-            # Make sure walkable terrain
-            if maze[node_position[0]][node_position[1]] == 'x':
-                continue
-
-            # Create new node
-            new_node = Node(current_node, node_position)
-
-            # Append
-            parents[new_node.position] = current_node.position
-            children.append(new_node)
-
-            # Loop through children
-        for child in children:
-
-            # Child is on the closed list
-            if child in closed_list:
-                continue
-
-            # Create the f, g, and h values
-            if 'r' in maze[int(child.position[0])][int(child.position[1])]:
-                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('r', ''))
-            elif 'b' in maze[int(child.position[0])][int(child.position[1])]:
-                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('b', ''))
-            elif 'p' in maze[int(child.position[0])][int(child.position[1])]:
-                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('p', ''))
-            else:
-                child.g = current_node.g + int(maze[int(child.position[0])][int(child.position[1])])
-
-            if for_robot is False:
-                current = current_node.position  # Where we are
-                next = child.position  # Where we wanna go
-
-                dx = next[0] - current[0]
-                dy = next[1] - current[1]
-                previous = (current[0] - dx, current[1] - dy)  # Where we want the robot to go, so it can push us
-
-                parent = parents[child.position]
-                robot_loc = None
-                try:
-                    robot_loc = robot_paths[parent][-1][0]
-                except:
-                    robot_loc = robot
-
-                # Check bounds and obstacles
-                if 0 <= previous[0] < len(table) and 0 <= previous[1] < len(table[1]) and table[previous[0]][
-                    previous[1]] != 'x':
-                    table_new = copy.deepcopy(table)
-                    table_new[current[0]][current[1]] = 'x'
-                    robot_path = A_star_again(robot_loc, previous, table_new, cols)
-
-                    robot_path += [(current_node.position, [])]  # push
-
-                    child.robot_path = robot_path
-                    robot_paths[child.position] = robot_path
-
-
-            child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
-                        (child.position[1] - end_node.position[1]) ** 2)
-            child.f = child.g + child.h
-
-            # Child is already in the open list
-            for open_node in open_list:
-                if child == open_node and child.g > open_node.g:
-                    continue
-
-            # Add the child to the open list
-            if for_robot or (child.position in robot_paths.keys()):
-                open_list.append(child)
-
-    return []
-
-
-
-def A_star_again(start, end, table, cols):
-    """Returns a list of tuples as a path from the given start to the given end in the given maze"""
-    maze = table
-    # Create start and end node
-    start_node = Node(None, start)
-    start_node.g = start_node.h = start_node.f = 0
-    end_node = Node(None, end)
-    end_node.g = end_node.h = end_node.f = 0
-
-    # Initialize both open and closed list
-    open_list = []
-    closed_list = []
-
-    # Add the start node
-    open_list.append(start_node)
-
-    # Loop until you find the end
-    while len(open_list) > 0:
-
-        # Get the current node
-        current_node = open_list[0]
-        current_index = 0
-        for index, item in enumerate(open_list):
-            if item.f < current_node.f:
-                current_node = item
-                current_index = index
-
-        # Pop current off open list, add to closed list
-        open_list.pop(current_index)
-        closed_list.append(current_node)
-
-        # Found the goal
-        if current_node == end_node:
-            path = []
-            current = Node()
-            current = current_node
-            while current is not None:
-                path.append(current.position)
-                current = current.parent
-            return path[::-1]# Return reversed path
-
-        # Generate children
-        children = []
-        for new_position in [(0, -1), (0, 1), (-1, 0), (1, 0)]: # Adjacent squares
-
-            # Get node position
-            node_position = (current_node.position[0] + new_position[0], current_node.position[1] + new_position[1])
-
-            # Make sure within range
-            if node_position[0] > (len(maze) - 1) or node_position[0] < 0 or node_position[1] > (len(maze[len(maze)-1]) -1) or node_position[1] < 0:
-                continue
-
-            # Make sure walkable terrain
-            if maze[node_position[0]][node_position[1]] == 'x':
-                continue
-
-            # Create new node
-            new_node = Node(current_node, node_position)
-
-            # Append
-            children.append(new_node)
-
-        # Loop through children
-        for child in children:
-
-            # Child is on the closed list
-            if child in closed_list:
-                continue
-
-            # Create the f, g, and h values
-            if 'r' in maze[int(child.position[0])][int(child.position[1])]:
-                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('r', ''))
-            elif 'b' in maze[int(child.position[0])][int(child.position[1])]:
-                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('b', ''))
-            elif 'p' in maze[int(child.position[0])][int(child.position[1])]:
-                child.g = int(maze[int(child.position[0])][int(child.position[1])].replace('p', ''))
-            else:
-                child.g = current_node.g + int(maze[int(child.position[0])][int(child.position[1])])
-
-            child.h = ((child.position[0] - end_node.position[0]) ** 2) + (
-                    (child.position[1] - end_node.position[1]) ** 2)
-            child.f = child.g + child.h
-
-            # Child is already in the open list
-            for open_node in open_list:
-                if child == open_node and child.g > open_node.g:
-                    continue
-
-            # Add the child to the open list
-            open_list.append(child)
-
-def main():
-    with open("test3.txt", "r") as file:
-        env = environment(file)
-    cols, table, people, butters, robot = env.map()
-    print(cols, table)
-    all_path = []
-    for i in range(len(butters)):
+    def available_actions(self, robot, butter):
         actions = []
-        butter = butters[i]
-        person = people[i]
-        cheat_path = []
-        robot_paths = {}
-        parents = {}
-        cost = 0
-
-        path = A_star(butter, person, table, cols, robot, robot_paths, parents)
-        all_path.append(path)
-        ##if there is no way !
-        if all_path == [[]]:
-            print("NO WAY!")
-            continue
-
-        robot = path[-1][-1][-1][0] ##update the robot location
-        print(f'Butter From {butter} to {person} goes like:')
-        last = None
-        for sec in path:
-            for i in range(len(sec[1]) - 1):
-                compare_x = sec[1][i][0]
-                compare_y = sec[1][i][1]
-                if i == len(sec[1]) - 2:
-                    compared_x = sec[1][i + 1][0][0]
-                    compared_y = sec[1][i + 1][0][1]
-                else:
-                    compared_x = sec[1][i+1][0]
-                    compared_y = sec[1][i + 1][1]
-                if last != (compare_x, compare_y):
-                    cheat_path.append((compare_x, compare_y))
-                if i == len(sec[1]) - 2:
-                    cheat_path.append((compared_x, compared_y))
-                if compare_x - compared_x == 0:
-                    if compare_y - compared_y == 1:
-                        actions.append("L")
-                    elif compare_y - compared_y == -1:
-                        actions.append("R")
-                elif compare_y - compared_y == 0:
-                    if compare_x - compared_x == 1:
-                        actions.append("U")
-                    elif compare_x - compared_x == -1:
-                        actions.append("D")
-                last = cheat_path[-1]
-        print("path:", cheat_path)
-        print(actions)
-        print("goal depth:",len(actions))
-        for j in range(len(cheat_path)):
-            if 'r' in table[cheat_path[j][0]][cheat_path[j][1]]:
-                cost += int(table[cheat_path[j][0]][cheat_path[j][1]].replace('r', ''))
-            elif 'b' in table[cheat_path[j][0]][cheat_path[j][1]]:
-                cost += int(table[cheat_path[j][0]][cheat_path[j][1]].replace('b', ''))
-            elif 'p' in table[cheat_path[j][0]][cheat_path[j][1]]:
-                cost += int(table[cheat_path[j][0]][cheat_path[j][1]].replace('p', ''))
+        if robot[0] - 1 >= 0 and self.table[robot[0] - 1][robot[1]] != "x":
+            if butter == (robot[0] - 1, robot[1]):
+                if robot[0] - 2 >= 0 and self.table[robot[0] - 2][robot[1]] != "x":
+                    actions.append("U")
             else:
-                cost += int(table[cheat_path[j][0]][cheat_path[j][1]])
-        print("cost:",cost)
+                actions.append("U")
+
+        if robot[0] + 1 < self.rows and self.table[robot[0] + 1][robot[1]] != "x":
+            if butter == (robot[0] + 1, robot[1]):
+                if robot[0] + 2 < self.rows and self.table[robot[0] + 2][robot[1]] != "x":
+                    actions.append("D")
+            else:
+                actions.append("D")
+
+        if robot[1] - 1 >= 0 and self.table[robot[0]][robot[1] - 1] != "x":
+            if butter == (robot[0], robot[1] - 1):
+                if robot[1] - 2 >= 0 and self.table[robot[0]][robot[1] - 2] != "x":
+                    actions.append("L")
+            else:
+                actions.append("L")
+
+        if robot[1] + 1 < self.cols and self.table[robot[0]][robot[1] + 1] != "x":
+            if butter == (robot[0], robot[1] + 1):
+                if robot[1] + 2 < self.cols and self.table[robot[0]][robot[1] + 2] != "x":
+                    actions.append("R")
+            else:
+                actions.append("R")
+        return actions
+
+    def step(self, robot, butter, action):
+        # action : "U", "D", "R", "L"
+        # robot: tuple (x, y)
+        if action not in self.available_actions(robot, butter):
+            raise ValueError("action is not available")
+
+        if action == "U":
+            next_robot = robot[0] - 1, robot[1]
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0] - 1, butter[1]
+            return next_robot, butter, int(cost)
+
+        elif action == "D":
+            next_robot = robot[0] + 1, robot[1]
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0] + 1, butter[1]
+            return next_robot, butter, int(cost)
+
+        elif action == "L":
+            next_robot = robot[0], robot[1] - 1
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0], butter[1] - 1
+            return next_robot, butter, int(cost)
+
+        elif action == "R":
+            next_robot = robot[0], robot[1] + 1
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0], butter[1] + 1
+            return next_robot, butter, int(cost)
+
+        else:
+            raise ValueError("action is wrong")
+
+    def available_actions_reverse(self, robot, butter):
+        actions = []
+        if robot[0] - 1 >= 0 and self.table[robot[0] - 1][robot[1]] != "x":
+            if butter != (robot[0] - 1, robot[1]):
+                actions.append("U")
+
+        if robot[0] + 1 < self.rows and self.table[robot[0] + 1][robot[1]] != "x":
+            if butter != (robot[0] + 1, robot[1]):
+                actions.append("D")
+
+        if robot[1] - 1 >= 0 and self.table[robot[0]][robot[1] - 1] != "x":
+            if butter != (robot[0], robot[1] - 1):
+                actions.append("L")
+
+        if robot[1] + 1 < self.cols and self.table[robot[0]][robot[1] + 1] != "x":
+            if butter != (robot[0], robot[1] + 1):
+                actions.append("R")
+
+        return actions
+
+    def step_inverse(self, robot, butter, action):
+        # action : "U", "D", "R", "L"
+        # robot: tuple (x, y)
+        if action not in self.available_actions_reverse(robot, butter):
+            raise ValueError("action is not available")
+
+        if action == "U":
+            next_robot = robot[0] - 1, robot[1]
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            robot_D = robot[0] + 1, robot[1]
+            if butter == robot_D:
+                butter = robot
+            return next_robot, butter, int(cost)
+
+        elif action == "D":
+            next_robot = robot[0] + 1, robot[1]
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            robot_U = robot[0] - 1, robot[1]
+            if butter == robot_U:
+                butter = robot
+            return next_robot, butter, int(cost)
+
+        elif action == "L":
+            next_robot = robot[0], robot[1] - 1
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            robot_R = robot[0], robot[1] + 1
+            if butter == robot_R:
+                butter = robot
+            return next_robot, butter, int(cost)
+
+        elif action == "R":
+            next_robot = robot[0], robot[1] + 1
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            robot_L = robot[0], robot[1] - 1
+            if butter == robot_L:
+                butter = robot
+            return next_robot, butter, int(cost)
+
+        else:
+            raise ValueError("action is wrong")
 
 
-if __name__ == '__main__':
-    main()
+class agent():
+    def __init__(self, env):
+        self.env = env
+        self.butter = env.find_butter()
+        self.robot = env.find_robot()
+        self.people = env.find_people()
 
+    def bfs(self):
+        queue = []
+        root = node(None, self.robot, self.butter, None)
+        queue.append(root)
+        while True:
+            n = queue.pop(0)
+            if n.butter == self.people:
+                self.show_path(n)
+                break
+            actions = env.available_actions(n.robot, n.butter)
+            for a in actions:
+                next_robot, next_butter, _ = env.step(n.robot, n.butter, a)
+                child = node(n, next_robot, next_butter, a)
+                queue.append(child)
+
+    def bidirectional_bfs(self):
+        queue_r = []
+        queue_p = []
+        is_visited_r = {}
+        is_visited_p = {}
+        root_r = node(None, self.robot, self.butter, None)
+        queue_r.append(root_r)
+
+        actions = env.available_actions(self.people, self.people)
+        for a in actions:
+            next_robot, next_butter, _ = env.step(self.people, self.people, a)
+            child = node(None, robot=next_robot, butter=self.people, action_from_par=None)
+            queue_p.append(child)
+
+        while True:
+            node_r = queue_r.pop(0)
+            node_p = queue_p.pop(0)
+            is_visited_r[node_r.robot + node_r.butter] = node_r
+            is_visited_p[node_p.robot + node_p.butter] = node_p
+            # print(node_r.robot, node_r.butter, node_r.action_from_par, node_p.robot, node_p.butter, node_p.action_from_par)
+            if node_r.robot + node_r.butter in is_visited_p.keys():
+                self.show_bidirectional_path(node_r, is_visited_p[node_r.robot + node_r.butter])
+                break
+            if node_p.robot + node_p.butter in is_visited_r.keys():
+                self.show_bidirectional_path(is_visited_r[node_p.robot + node_p.butter], node_p)
+                break
+            actions = env.available_actions(node_r.robot, node_r.butter)
+            for a in actions:
+                next_robot, next_butter, _ = env.step(node_r.robot, node_r.butter, a)
+                if next_robot + next_butter not in is_visited_r.keys():
+                    child = node(node_r, next_robot, next_butter, a)
+                    queue_r.append(child)
+
+            actions = env.available_actions_reverse(robot=node_p.robot, butter=node_p.butter)
+            for a in actions:
+                next_robot, next_butter, _ = env.step_inverse(robot=node_p.robot, butter=node_p.butter, action=a)
+                if next_robot + next_butter not in is_visited_p.keys():
+                    child = node(node_p, next_robot, next_butter, a)
+                    queue_p.append(child)
+
+    def show_path(self, final_node):
+        n = final_node
+        print("****")
+        print(n.robot, n.action_from_par)
+        while n != None:
+            n = n.parent
+            print(n.robot, n.action_from_par)
+
+    def show_bidirectional_path(self, final_node_r, final_node_p):
+        n = final_node_r
+        print("****")
+        print(n.robot, n.butter, n.action_from_par)
+        while n.parent != None:
+            n = n.parent
+            print(n.robot, n.butter, n.action_from_par)
+
+        n = final_node_p
+        print(n.robot, n.butter, n.action_from_par)
+        while n.parent != None:
+            n = n.parent
+            print(n.robot, n.butter, n.action_from_par)
+
+    def inv(self, action):
+        if action == "U":
+            return "D"
+        if action == "D":
+            return "U"
+        if action == "R":
+            return "L"
+        if action == "L":
+            return "R"
+
+
+if __name__ == "__main__":
+    with open("test5.txt", "r") as file:
+        env = environment(file)
+    test_agent = agent(env)
+    test_agent.bidirectional_bfs()
