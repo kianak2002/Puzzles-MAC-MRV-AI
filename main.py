@@ -246,11 +246,17 @@ class agent():
             # print(node_r.robot, node_r.butter, node_r.action_from_par, node_p.robot, node_p.butter, node_p.action_from_par)
             if node_r.robot + node_r.butter in is_visited_p.keys():
                 self.show_bidirectional_path(node_r, is_visited_p[node_r.robot + node_r.butter])
-                return node_r.robot
+                n = is_visited_p[node_r.robot + node_r.butter]
+                while n.parent != None:
+                    n = n.parent
+                return n.butter
                 # break
             if node_p.robot + node_p.butter in is_visited_r.keys():
                 self.show_bidirectional_path(is_visited_r[node_p.robot + node_p.butter], node_p)
-                return node_p.robot
+                n = node_p
+                while n.parent != None:
+                    n = n.parent
+                return n.butter
                 # break
             actions = env.available_actions(node_r.robot, node_r.butter)
             for a in actions:
@@ -308,6 +314,7 @@ if __name__ == "__main__":
     test_agent = agent(env)
     print(len(butter_list))
     for i in range(len(butter_list)):
+        # print(robot)
         robot = test_agent.bidirectional_bfs(people_list, butter_list[i], robot)
-
+        print(robot)
     # test_agent.bidirectional_bfs()
