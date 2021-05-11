@@ -13,12 +13,18 @@ class environment():
     def __init__(self, map_file):
         self.rows, self.cols = map(int, map_file.readline().split())
         self.table = [map_file.readline().split() for j in range(self.rows)]
+        self.find_people()
+        self.find_butter()
+
+    def map(self):
+        return self.people_list, self.butter_list
 
     def find_people(self):
+        self.people_list = []
         for i in range(self.rows):
             for j in range(self.cols):
                 if 'p' in self.table[i][j]:
-                    return i, j
+                    self.people_list.append((i, j))
 
     def find_robot(self):
         for i in range(self.rows):
@@ -27,10 +33,11 @@ class environment():
                     return i, j
 
     def find_butter(self):
+        self.butter_list = []
         for i in range(self.rows):
             for j in range(self.cols):
                 if 'b' in self.table[i][j]:
-                    return i, j
+                    self.butter_list.append((i, j))
 
     def find_obstables(self):
         self.obstacle_list = []
@@ -215,19 +222,21 @@ class agent():
                 child = node(n, next_robot, next_butter, a)
                 queue.append(child)
 
-    def bidirectional_bfs(self):
+    def bidirectional_bfs(self, people_list, butter, robot):
         queue_r = []
         queue_p = []
         is_visited_r = {}
         is_visited_p = {}
-        root_r = node(None, self.robot, self.butter, None)
+        root_r = node(None, robot, butter, None)
         queue_r.append(root_r)
 
-        actions = env.available_actions(self.people, self.people)
-        for a in actions:
-            next_robot, next_butter, _ = env.step(self.people, self.people, a)
-            child = node(None, robot=next_robot, butter=self.people, action_from_par=None)
-            queue_p.append(child)
+
+        for i in range(len(people_list)):
+            actions = env.available_actions(people_list[i], people_list[i])
+            for a in actions:
+                next_robot, next_butter, _ = env.step(people_list[i], people_list[i], a)
+                child = node(None, robot=next_robot, butter=people_list[i], action_from_par=None)
+                queue_p.append(child)
 
         while True:
             node_r = queue_r.pop(0)
@@ -237,10 +246,12 @@ class agent():
             # print(node_r.robot, node_r.butter, node_r.action_from_par, node_p.robot, node_p.butter, node_p.action_from_par)
             if node_r.robot + node_r.butter in is_visited_p.keys():
                 self.show_bidirectional_path(node_r, is_visited_p[node_r.robot + node_r.butter])
-                break
+                return node_r.robot
+                # break
             if node_p.robot + node_p.butter in is_visited_r.keys():
                 self.show_bidirectional_path(is_visited_r[node_p.robot + node_p.butter], node_p)
-                break
+                return node_p.robot
+                # break
             actions = env.available_actions(node_r.robot, node_r.butter)
             for a in actions:
                 next_robot, next_butter, _ = env.step(node_r.robot, node_r.butter, a)
@@ -289,7 +300,14 @@ class agent():
 
 
 if __name__ == "__main__":
-    with open("test5.txt", "r") as file:
+    with open("test3.txt", "r") as file:
         env = environment(file)
+    people_list, butter_list = env.map()
+    robot = env.find_robot()
+    print(people_list, butter_list)
     test_agent = agent(env)
-    test_agent.bidirectional_bfs()
+    print(len(butter_list))
+    for i in range(len(butter_list)):
+        robot = test_agent.bidirectional_bfs(people_list, butter_list[i], robot)
+
+    # test_agent.bidirectional_bfs()
