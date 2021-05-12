@@ -1,336 +1,285 @@
-def input(address):
-    text = open(address, "r")
-    rows, cols = map(int, text.readline().split())
-    table = [text.readline().split() for j in range(rows)]
-    return table, cols
-
-def start_destination(table, cols, typeStart, typeTarget):
-    # xHead, yHead, xTarget, yTarget = [], [], [], []
-    Head, Target, Robot = [], [], []
-    for i in range(len(table)):
-        for j in range(cols):
-            if 'r' in table[i][j]:
-                Robot.append([i, j])
-            # elif 'b' in table[i][j]:
-            if ('r' in table[i][j] and typeStart == 'r') or ('b' in table[i][j] and typeStart == 'b'):
-                # xHead, yHead = i, j
-                # xHead.append(i)
-                # yHead.append(j)
-                Head.append([i, j])
-            if ('b' in table[i][j] and typeTarget == 'b') or ('p' in table[i][j] and typeTarget == 'p'):
-                # xTarget, yTarget = i, j
-                # xTarget.append(i)
-                # yTarget.append(j)
-                Target.append([i, j])
-    # return xHead, yHead, xTarget, yTarget
-    return Head, Target, Robot
-def IDS_R_To_B(table, cols, xHead, yHead, xTarget, yTarget, avoid):
-    explored, frontier = [], []
-    child = dict()
-    frontier.append(xHead * cols + yHead)
-    while len(frontier) > 0:
-        xNode, yNode = int(frontier[0] / cols), frontier[0] % cols
-
-        if 0 < xNode < len(table) and ((xNode - 1) * cols + yNode) not in explored and ((xNode - 1) * cols + yNode) != avoid:  # up
-            if xNode - 1 == xTarget and yNode == yTarget:
-                child[(xNode - 1) * cols + yNode] = xNode * cols + yNode
-                return child
-            elif 'x' not in table[xNode - 1][yNode]:
-                child[(xNode - 1) * cols + yNode] = xNode * cols + yNode
-                if ((xNode - 1) * cols + yNode) not in frontier:
-                    frontier.append((xNode - 1) * cols + yNode)
-
-        if 0 <= xNode < len(table) - 1 and ((xNode + 1) * cols + yNode) not in explored  and ((xNode + 1) * cols + yNode) != avoid:  # down
-            if xNode + 1 == xTarget and yNode == yTarget:
-                child[(xNode + 1) * cols + yNode] = xNode * cols + yNode
-                return child
-            elif 'x' not in table[xNode + 1][yNode]:
-                child[(xNode + 1) * cols + yNode] = xNode * cols + yNode
-                if ((xNode + 1) * cols + yNode) not in frontier:
-                    frontier.append((xNode + 1) * cols + yNode)
-
-        if 0 < yNode < cols and (xNode * cols + yNode - 1) not in explored and (xNode * cols + yNode - 1) != avoid:  # left
-            if xNode == xTarget and yNode - 1 == yTarget:
-                child[xNode * cols + yNode - 1] = xNode * cols + yNode
-                return child
-            elif 'x' not in table[xNode][yNode - 1]:
-                child[xNode * cols + yNode - 1] = xNode * cols + yNode
-                if (xNode * cols + yNode - 1) not in frontier:
-                    frontier.append(xNode * cols + yNode - 1)
-
-        if 0 <= yNode < cols - 1 and (xNode * cols + yNode + 1) not in explored and (xNode * cols + yNode + 1) != avoid: # right
-            if xNode == xTarget and yNode + 1 == yTarget:
-                child[xNode * cols + yNode + 1] = xNode * cols + yNode
-                return child
-            elif 'x' not in table[xNode][yNode + 1]:
-                child[xNode * cols + yNode + 1] = xNode * cols + yNode
-                if (xNode * cols + yNode + 1) not in frontier:
-                    frontier.append(xNode * cols + yNode + 1)
-
-        if (xNode * cols + yNode) not in explored:
-            explored.append(xNode * cols + yNode)
-        frontier.remove(xNode * cols + yNode)
-    return -1
+import numpy as np
+'''
+class for node to save robot and butter for each node
+and saves th parent and action from parent for the path
+'''
+class node():
+    def __init__(self, parent, robot, butter, action_from_par):
+        self.parent = parent
+        self.robot = robot
+        self.butter = butter
+        self.action_from_par = action_from_par
 
 
-
-def IDS_B_To_P(table, cols, xNode, yNode, xTarget, yTarget):
-    explored, frontier = [], []
-    child = dict()
-    frontier.append(xNode * cols + yNode)
-    # print( xNode, yNode, xTarget, yTarget)
-    while len(frontier) > 0:
-        # print(child)
-        # print(explored, frontier, len(frontier))
-        xNode, yNode = int(frontier[0] / cols), frontier[0] % cols
-        # print(explored)
-        # print(yNode, cols - 1, explored, table[xNode][yNode-1], IDS_R_To_B(table, cols, xNode, yNode+1, xNode, yNode-1, xNode*cols+yNode+1))
-        if 0 < xNode < len(table)-1 and ((xNode - 1) * cols + yNode) not in explored and table[xNode+1][yNode] != 'x' and \
-                IDS_R_To_B(table, cols, xNode-1, yNode, xNode+1, yNode, (xNode-1)*cols+yNode) != -1:  # up
-            if xNode - 1 == xTarget and yNode == yTarget:
-                child[(xNode - 1) * cols + yNode] = xNode * cols + yNode
-                # print(1)
-                return child
-            elif table[xNode - 1][yNode] != 'x':
-                child[(xNode - 1) * cols + yNode] = xNode * cols + yNode
-                if ((xNode - 1) * cols + yNode) not in frontier:
-                    frontier.append((xNode - 1) * cols + yNode)
-
-        if 0 < xNode < len(table) - 1 and ((xNode + 1) * cols + yNode) not in explored and table[xNode-1][yNode] != 'x' \
-                and IDS_R_To_B(table, cols, xNode+1, yNode, xNode-1, yNode, (xNode+1)*cols+yNode) != -1:  # down
-            if xNode + 1 == xTarget and yNode == yTarget:
-                child[(xNode + 1) * cols + yNode] = xNode * cols + yNode
-                # print(child)
-                # print(2)
-                return child
-            elif 'x' not in table[xNode + 1][yNode]:
-                child[(xNode + 1) * cols + yNode] = xNode * cols + yNode
-                if ((xNode + 1) * cols + yNode) not in frontier:
-                    frontier.append((xNode + 1) * cols + yNode)
-
-        if 0 < yNode < cols - 1 and (xNode * cols + yNode + 1) not in explored and table[xNode][yNode-1] != 'x' and \
-                IDS_R_To_B(table, cols, xNode, yNode+1, xNode, yNode-1, xNode*cols+yNode+1) != -1:   # right
-            if xNode == xTarget and yNode + 1 == yTarget:
-                child[xNode * cols + yNode + 1] = xNode * cols + yNode
-                # print(3)
-                return child
-            elif 'x' not in table[xNode][yNode + 1]:
-                child[xNode * cols + yNode + 1] = xNode * cols + yNode
-                if (xNode * cols + yNode + 1) not in frontier:
-                    frontier.append(xNode * cols + yNode + 1)
-
-        if 0 < yNode < cols-1 and (xNode * cols + yNode - 1) not in explored and table[xNode][yNode+1] != 'x' and \
-                IDS_R_To_B(table, cols, xNode, yNode-1, xNode, yNode+1, xNode*cols+yNode-1) != -1:  # left
-            if xNode == xTarget and yNode - 1 == yTarget:
-                child[xNode * cols + yNode - 1] = xNode * cols + yNode
-                # print(4)
-                return child
-            elif 'x' not in table[xNode][yNode - 1]:
-                child[xNode * cols + yNode - 1] = xNode * cols + yNode
-                if (xNode * cols + yNode - 1) not in frontier:
-                    frontier.append(xNode * cols + yNode - 1)
-        if (xNode * cols + yNode) not in explored:
-            explored.append(xNode * cols + yNode)
-        frontier.remove(xNode * cols + yNode)
-        # print(child)
-    # print('ldfkjvjske', explored, frontier)
-    return -1
-
-def Path_IDS(childs, start, target, path):
-    # print( start, target, path)
-    # print(childs)
-    path.append(target)
-    while True:
-        path.append(childs.get(target))
-        if start != childs.get(target):
-            target = childs.get(target)
-        else:
-            return path
-
-def R_to_B(path, cols, way):
-    path.reverse()
-    # print('R to B', path)
-    for i in range (len(path)-1):
-        if path[i+1] == path[i]+cols:
-            # print('D', end=' ')
-            way.append('D')
-        if path[i+1] == path[i]-cols:
-            # print('U', end=' ')
-            way.append('U')
-        if path[i+1] == path[i]+ 1:
-            # print('R', end=' ')
-            way.append('R')
-        if path[i+1] == path[i]-1:
-            # print('L', end=' ')
-            # print(path[i], path[i+1])
-            # print('rrrrrrrr')
-            way.append('L')
-            # way.join('L')
-    # print(way)
-    return way
+'''
+class for map and finding robot and butters and plates and obstacles position
+and check the available actions for both normal and reversed movements 
+'''
 
 
-def B_to_P(table, pathB, cols):
-    pathB.reverse()
-    # print('B to P', pathB)
-    way = []
-    way = R_to_B([pathB[1], pathB[0]], cols, way)
-    # print('wa', way)
-    # print('way111', way, pathB)
-    for i in range(len(pathB) - 2):
-        # print('way', way)
-        # print( int(pathB[i+1]/cols), pathB[i+1]%cols, int(pathB[i+2]/cols), pathB[i+2]%cols)
-        pathR, child = [], []
-        if int(pathB[i+2]/cols) == int(pathB[i+1]/cols):
-            if pathB[i+2]%cols == pathB[i+1]%cols+1:        #right
-                # print(1)
-                xTarget, yTarget = int(pathB[i+1]/cols), pathB[i+1]%cols-1
-                # print(xTarget, yTarget)
-                child = IDS_R_To_B(table, cols, int(pathB[i]/cols), pathB[i]%cols, xTarget, yTarget, pathB[i+1])
-                if child != -1:
-                    pathR = Path_IDS(child,pathB[i], xTarget*cols +yTarget, pathR)
-                    way = R_to_B(pathR, cols, way)
-                way.append('R')
-            elif pathB[i+2]%cols == pathB[i+1]%cols-1:        #left
-                # print(2)
-                # print('way1', way)
-                # print('hiiiiiiiiiii')
-                xTarget, yTarget = int(pathB[i+1]/cols), pathB[i+1]%cols+1
-                # print(int(pathB[i] / cols), pathB[i] % cols)
-                # print(xTarget, yTarget)
-                # print('way2', way)
-                child = IDS_R_To_B(table, cols, int(pathB[i]/cols), pathB[i]%cols, xTarget, yTarget, pathB[i+1])
-                if child != -1:
-                    pathR = Path_IDS(child,pathB[i], xTarget*cols +yTarget, pathR)
-                    way = R_to_B(pathR, cols, way)
-                # print('hhhhhh')
-                way.append('L')
-        elif pathB[i + 2] % cols == pathB[i + 1] % cols:
-            if int(pathB[i + 2]/ cols) == int(pathB[i + 1] / cols) + 1:  # down
-                # print('-2', way)
-                # print(3)
-                # print('dooooooown')
-                xTarget, yTarget = int(pathB[i + 1] / cols)-1, pathB[i + 1] % cols
-                # print(int(pathB[i] / cols), pathB[i] % cols)
-                # print(xTarget, yTarget)
-                # print(int(pathB[i] / cols), pathB[i] % cols, xTarget, yTarget,pathB[i + 1])
-                # print('-1', way)
-                child = IDS_R_To_B(table, cols, int(pathB[i] / cols), pathB[i] % cols, xTarget, yTarget,pathB[i + 1])
-                # print(child)
-                if child != -1:
-                    # print('0', way)
-                    pathR = Path_IDS(child, pathB[i], xTarget * cols + yTarget, pathR)
-                    # print(pathR)
-                    # print('1', way)
-                    way = R_to_B(pathR, cols, way)
-                    # print('2', way)
-                way.append('D')
-            elif int(pathB[i + 2] / cols) == int(pathB[i + 1] / cols) - 1:  # up
-                # print(4)
-                xTarget, yTarget = int(pathB[i + 1] / cols)+1, pathB[i + 1] % cols
-                child = IDS_R_To_B(table, cols, int(pathB[i] / cols), pathB[i] % cols, xTarget, yTarget,pathB[i + 1])
-                if child != -1:
-                    pathR = Path_IDS(child, pathB[i], xTarget * cols + yTarget, pathR)
-                    way = R_to_B(pathR, cols, way)
-                way.append('U')
-    # print('path B to P', way)
-    return way
+class environment():
+    def __init__(self, map_file):
+        self.rows, self.cols = map(int, map_file.readline().split())
+        self.table = [map_file.readline().split() for j in range(self.rows)]
+        self.find_people()
+        self.find_butter()
+    '''
+    to have the plates and butters position and table and cols
+    '''
+    def map(self):
+        return self.people_list, self.butter_list, self.table, self.cols
 
-if __name__ == '__main__':
-    table, cols = input("test9.txt")
-    Head, Target, Robot = start_destination(table, cols, 'b', 'p')
-    ways = []
-    points = []
-    B_To_P = []
-    for i in range (len(Head)):
-        for j in range (len(Target)):
-            # print(Head[i], Target[j])
-            child = IDS_B_To_P(table, cols, Head[i][0], Head[i][1], Target[j][0], Target[j][1])
-            if child == -1:
-                continue
+    '''
+    to find plates(people) position
+    '''
+    def find_people(self):
+        self.people_list = []
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if 'p' in self.table[i][j]:
+                    self.people_list.append((i, j))
+
+    '''
+    to find robot position
+    '''
+    def find_robot(self):
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if 'r' in self.table[i][j]:
+                    return i, j
+    '''
+    to find the butters position
+    '''
+    def find_butter(self):
+        self.butter_list = []
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if 'b' in self.table[i][j]:
+                    self.butter_list.append((i, j))
+    '''
+    to find the obstacles position
+    '''
+    def find_obstacles(self):
+        self.obstacle_list = []
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if 'x' in self.table[i][j]:
+                    self.obstacle_list.append((i, j))
+    '''
+    check all the available actions for robot and return them
+    '''
+    def available_actions(self, robot, butter):
+        actions = []
+        if robot[0] - 1 >= 0 and self.table[robot[0] - 1][robot[1]] != "x":
+            if butter == (robot[0] - 1, robot[1]):
+                if robot[0] - 2 >= 0 and self.table[robot[0] - 2][robot[1]] != "x":
+                    actions.append("U")
             else:
-                pathB_To_P = Path_IDS(child, Head[i][0] * cols + Head[i][1], Target[j][0] * cols + Target[j][1], [])
-                xHead, yHead = Head[i][0], Head[i][1]
-                if xHead == int(pathB_To_P[len(pathB_To_P) - 2] / cols):
-                    if yHead == pathB_To_P[len(pathB_To_P)-2] % cols - 1:
-                        yHead -= 1
-                    elif yHead == pathB_To_P[len(pathB_To_P)-2] % cols + 1:
-                        yHead += 1
-                elif yHead == pathB_To_P[len(pathB_To_P)-2] % cols:
-                    if xHead == int(pathB_To_P[len(pathB_To_P)-2] / cols) - 1:
-                        xHead -= 1
-                    if xHead == int(pathB_To_P[len(pathB_To_P)-2] / cols) + 1:
-                        xHead += 1
-                # print(xHead, yHead, Target[j])
-                child2 = IDS_R_To_B(table, cols, Robot[0][0], Robot[0][1], xHead, yHead, pathB_To_P[len(pathB_To_P) - 1])
-                way, wayR_To_B = [], []
-                if Robot[0][0] == xHead and Robot[0][1] == yHead:
-                    pathR_To_B = []
-                elif child2 == -1:
-                    continue
-                else:
-                    pathR_To_B = Path_IDS(child2, Robot[0][0] * cols + Robot[0][1], xHead* cols + yHead, [])
-                wayR_To_B = R_to_B(pathR_To_B, cols, [])
-                wayB_To_P = B_to_P(table, pathB_To_P, cols)
-                B_To_P.append(wayB_To_P)
-                for k in range (len(wayB_To_P)):
-                    wayR_To_B.append(wayB_To_P[k])
-                # print('R TO B', wayR_To_B)
-                points.append([Head[i], Target[j], [xHead, yHead]])
-                ways.append(wayR_To_B)
-                # print('\n\n\n\n')
-    # print(B_To_P)
-    # print(points)
-    # print(ways)
+                actions.append("U")
 
-    if len(ways)==1:
-        for i in range (len(ways[0])):
-            print(ways[0][i], end=' ')
-        exit(0)
-    # print()
-    # print()
+        if robot[0] + 1 < self.rows and self.table[robot[0] + 1][robot[1]] != "x":
+            if butter == (robot[0] + 1, robot[1]):
+                if robot[0] + 2 < self.rows and self.table[robot[0] + 2][robot[1]] != "x":
+                    actions.append("D")
+            else:
+                actions.append("D")
 
-    pointsT, waysT, B_To_PT = [], [], []
-    for i in range (len(Head)):
-        min = float('inf')
-        index = -1
-        for j in range (len(points)):
-            if Head[i] == points[j][0] and min > len(ways[j]):
-                min = len(ways[j])
-                index = j
-        if len(points)== 0:
-            print('The path is not reachable')
-            exit(0)
-        B_To_PT.append(B_To_P[index])
-        pointsT.append(points[index])
-        waysT.append(ways[index])
-    # print(B_To_PT)
-    # print(pointsT)
-    # print(waysT)
+        if robot[1] - 1 >= 0 and self.table[robot[0]][robot[1] - 1] != "x":
+            if butter == (robot[0], robot[1] - 1):
+                if robot[1] - 2 >= 0 and self.table[robot[0]][robot[1] - 2] != "x":
+                    actions.append("L")
+            else:
+                actions.append("L")
+
+        if robot[1] + 1 < self.cols and self.table[robot[0]][robot[1] + 1] != "x":
+            if butter == (robot[0], robot[1] + 1):
+                if robot[1] + 2 < self.cols and self.table[robot[0]][robot[1] + 2] != "x":
+                    actions.append("R")
+            else:
+                actions.append("R")
+        return actions
+    '''
+    check the action given with all available actions
+    if allowed then it moves the robot and if needed the butter
+    '''
+    def step(self, robot, butter, action):
+        # action : "U", "D", "R", "L"
+        # robot: tuple (x, y)
+        if action not in self.available_actions(robot, butter):
+            raise ValueError("action is not available")
+
+        if action == "U":
+            next_robot = robot[0] - 1, robot[1]
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0] - 1, butter[1]
+            return next_robot, butter, int(cost)
+
+        elif action == "D":
+            next_robot = robot[0] + 1, robot[1]
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0] + 1, butter[1]
+            return next_robot, butter, int(cost)
+
+        elif action == "L":
+            next_robot = robot[0], robot[1] - 1
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0], butter[1] - 1
+            return next_robot, butter, int(cost)
+
+        elif action == "R":
+            next_robot = robot[0], robot[1] + 1
+            cost = self.table[next_robot[0]][next_robot[1]]
+            cost = cost.replace("b", "")
+            cost = cost.replace("r", "")
+            cost = cost.replace("p", "")
+            if next_robot == butter:
+                butter = butter[0], butter[1] + 1
+            return next_robot, butter, int(cost)
+
+        else:
+            raise ValueError("action is wrong")
 
 
-    for i in range (len(waysT)):    #points[b, p, starrtR, finishR]
-        if waysT[i][len(waysT[i]) - 1] == 'U':
-            pointsT[i].append([pointsT[i][1][0]+1, pointsT[i][1][1]])
-        if waysT[i][len(waysT[i])-1] == 'D':
-            pointsT[i].append([pointsT[i][1][0]-1, pointsT[i][1][1]])
-        if waysT[i][len(waysT[i])-1] == 'R':
-            pointsT[i].append([pointsT[i][1][0], pointsT[i][1][1]-1])
-        if waysT[i][len(waysT[i])-1] == 'U':
-            pointsT[i].append([pointsT[i][1][0]+1, pointsT[i][1][1]+1])
-    # print(pointsT)
+'''
+class for ids
+it has the butter and robot and plates(people)
+'''
 
-    for i in range (len(waysT)-1):
-        for j in range (len(waysT[i])):
-            print(waysT[i][j], end=' ')
-        print()
-        if i< len(waysT):
-            child1 = IDS_R_To_B(table, cols, pointsT[i][3][0], pointsT[i][3][1], pointsT[i+1][2][0], pointsT[i+1][2][1], pointsT[i+1][0][0]*cols + pointsT[i+1][0][1])
-            path1 = Path_IDS(child1, pointsT[i][3][0]*cols+ pointsT[i][3][1], pointsT[i+1][2][0]*cols+ pointsT[i+1][2][1], [])
-            way1 = R_to_B(path1, cols, [])
-            for k in range (len(way1)):
-                print(way1[k], end=' ')
-        print()
-        for i in range (len(B_To_PT[len(B_To_PT)-1])):
-            print(waysT[len(B_To_PT)-1][i], end=' ')
-    
+
+class agent():
+    def __init__(self, env):
+        self.env = env
+        self.butter = env.find_butter()
+        self.robot = env.find_robot()
+        self.people = env.find_people()
+    '''
+    ids algorithm 
+    calls dfs for each depth
+    '''
+    def ids(self,people_list, butter, robot, table, cols):
+        root = node(None, robot, butter, None)
+        queue_temp=[]
+        depth_limit = 20
+        i = 0
+        while (i<=depth_limit):
+            front=[]
+            res=self.dfs(root,front,i, people_list, table, cols, butter)
+            if(res is not None):
+                if   res[0] is not None and res[0] is not False:
+                    res[0].insert(0, root)
+                    return res[0],res[1],res[2],i
+
+            i+=1
+    '''
+    recursive dfs algorithm
+    '''
+    def dfs(self,Node:node,path,depth, people_list, table,cols, first_butter):
+        for person in people_list:
+            if Node.butter == person:
+                path, action_path, robot_last = self.show_path(Node, table, cols, first_butter)
+                return path, action_path, robot_last
+        if(depth<=0):
+            return None,None,None
+        next=[]
+        actions = env.available_actions(Node.robot, Node.butter)
+        for a in actions:
+            next_robot, next_butter, _ = env.step(Node.robot, Node.butter, a)
+            child = node(Node, next_robot, next_butter, a)
+            next.append(child)
+        for childs in next:
+            res = self.dfs(childs,path,depth-1, people_list, table, cols, first_butter)
+            if(res is not None):
+                if res[0] is not None:
+                    path.insert(0, childs)
+                    return path,res[1],res[2]
+    '''
+    shows the path and also prints it
+    '''
+    def show_path(self, final_node, table, cols, butter):
+        path = []
+        action_path = []
+        n = final_node
+        print("****")
+        while n.parent != None:
+            path.append(n.robot)
+            action_path.append(n.action_from_par)
+            n = n.parent
+        path.append(n.robot)
+        path.reverse()
+        action_path.reverse()
+        print("path:", path)
+        print("actions:", action_path)
+        print("cost:", len(action_path))
+        terminal(table, cols, path, action_path, butter)
+        return action_path, path, final_node.robot
+
+def beauty(table, cols):
+    for i in range(len(table)):
+        print(*table[i], sep='\t\t')
+
+
+'''
+to draw a map step by step
+'''
+def terminal(table, cols, path, action, butter):
+    print()
+    beauty(table, cols)
+    print('------------------------------------------')
+    xButter, yButter = butter[0], butter[1]
+    check = False
+    for i in range(1, len(action) + 1):
+        table[path[i][0]][path[i][1]] += 'r'
+        if path[i][0] == xButter and path[i][1] == yButter:
+            check = True
+            table[path[i][0]][path[i][1]] = table[path[i][0]][path[i][1]].replace('b', '')
+        if action[i - 1] == 'U':
+            table[path[i][0] + 1][path[i][1]] = table[path[i][0] + 1][path[i][1]].replace('r', '')
+            if check:
+                table[path[i][0] - 1][path[i][1]] += 'b'
+                xButter -= 1
+        if action[i - 1] == 'D':
+            table[path[i][0] - 1][path[i][1]] = table[path[i][0] - 1][path[i][1]].replace('r', '')
+            if check:
+                table[path[i][0] + 1][path[i][1]] += 'b'
+                xButter += 1
+        if action[i - 1] == 'R':
+            table[path[i][0]][path[i][1] - 1] = table[path[i][0]][path[i][1] - 1].replace('r', '')
+            if check:
+                table[path[i][0]][path[i][1] + 1] += 'b'
+                yButter += 1
+        if action[i - 1] == 'L':
+            table[path[i][0]][path[i][1] + 1] = table[path[i][0]][path[i][1] + 1].replace('r', '')
+            if check:
+                table[path[i][0]][path[i][1] - 1] += 'b'
+                yButter -= 1
+        check = False
+        beauty(table, cols)
+        print('--------------------------------------')
+
+if __name__ == "__main__":
+    with open("test3.txt", "r") as file:
+        env = environment(file)
+    people_list, butter_list , table, cols = env.map()
+    robot = env.find_robot()
+    test_agent = agent(env)
+    for i in range(len(butter_list)):
+        res = test_agent.ids(people_list, butter_list[i], robot, table, cols)
+        robot = res[2]
+        if res[3] == 0:
+            print("Impossible!")
+            print("path:", [])
+            print("actions:", [])
+            print("cost:", res[3])
+        print("goal depth:", res[3])
