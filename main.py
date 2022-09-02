@@ -1,225 +1,283 @@
-import numpy as np
-class node():
-    def __init__(self, parent, robot, butter, action_from_par):
-        self.parent = parent
-        self.robot = robot
-        self.butter = butter
-        self.action_from_par = action_from_par
+"""
+function for getting the input
+"""
+
+
+def scan():
+    f = open('puzzle4.txt', "r")
+    coordination = f.readline()
+    x, y = map(int, coordination.split())
+    table = [[0 for i in range(y)] for j in range(x)]
+    heuristic = [[0 for i in range(y)] for j in range(x)]
+    for i in range(x):
+        data = f.readline().split()
+        for j in range(y):
+            table[i][j] = data[j]
+            heuristic[i][j] = [0, 1]
+    return table, heuristic
 
 
 '''
-class for map and finding robot and butters and plates and obstacles position
-and check the available actions for both normal and reversed movements 
+print the table each time
 '''
 
 
-class environment():
-    def __init__(self, map_file):
-        self.rows, self.cols = map(int, map_file.readline().split())
-        self.table = [map_file.readline().split() for j in range(self.rows)]
-        self.find_people()
-        self.find_butter()
-    '''
-    to have the plates and butters position
-    '''
-    def map(self):
-        return self.people_list, self.butter_list
+def terminal(table):
+    strings_row = []
+    for i in range(len(table)):  # all rows are copied in strings_row
+        table_copy = table[i]
+        table_copy = ''.join(table_copy)
+        strings_row.append(table_copy)
+    for j in range(len(table)):
+        print(strings_row[j])
+    print('\n\n\n')
+
+
+'''
+a class for rules , heuristic and filling the table
+'''
+
+
+class Game:
+    def __init__(self, table, heuristic):
+        self.table = table
+        self.heuristic = heuristic
+        self.dimension = len(table)
 
     '''
-    to find plates(people) position
+    a function to check rules and change the domains of blocks
+    if there two ones or zeros in row it change the domain for next block
+    if a row or column is one to full it check the equality between ones and zeros and update the domain
     '''
-    def find_people(self):
-        self.people_list = []
-        for i in range(self.rows):
-            for j in range(self.cols):
-                if 'p' in self.table[i][j]:
-                    self.people_list.append((i, j))
+
+    def h(self):
+        if not self.error():
+            exit(0)
+        strings_row = []
+        strings_column = []
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                if self.table[i][j] == '1':
+                    self.heuristic[i][j] = [1]
+                    if j < self.dimension - 1 and self.table[i][j + 1] == '1':
+                        if j > 0 and 1 in self.heuristic[i][j - 1]:
+                            self.heuristic[i][j - 1].remove(1)
+                        if j < self.dimension - 2 and 1 in self.heuristic[i][j + 2]:
+                            self.heuristic[i][j + 2].remove(1)
+                    if i < self.dimension - 1 and self.table[i + 1][j] == '1':
+                        if i > 0 and 1 in self.heuristic[i - 1][j]:
+                            self.heuristic[i - 1][j].remove(1)
+                        if i < self.dimension - 2 and 1 in self.heuristic[i + 2][j]:
+                            self.heuristic[i + 2][j].remove(1)
+                    if i < self.dimension - 2 and self.table[i + 2][j] == '1' and 1 in self.heuristic[i + 1][j]:
+                        self.heuristic[i + 1][j].remove(1)
+                    if i > 1 and table[i - 2][j] == '1' and 1 in heuristic[i - 1][j]:
+                        self.heuristic[i - 1][j].remove(1)
+                    if j < self.dimension - 2 and self.table[i][j + 2] == '1' and 1 in self.heuristic[i][j + 1]:
+                        self.heuristic[i][j + 1].remove(1)
+                    if j > 1 and self.table[i][j - 2] == '1' and 1 in self.heuristic[i][j - 1]:
+                        self.heuristic[i][j - 1].remove(1)
+                elif self.table[i][j] == '0':
+                    self.heuristic[i][j] = [0]
+                    if j < self.dimension - 1 and self.table[i][j + 1] == '0':
+                        if j > 0 and 0 in heuristic[i][j - 1]:
+                            self.heuristic[i][j - 1].remove(0)
+                        if j < self.dimension - 2 and 0 in self.heuristic[i][j + 2]:
+                            self.heuristic[i][j + 2].remove(0)
+                    if i < self.dimension - 1 and self.table[i + 1][j] == '0':
+                        if i > 0 and 0 in self.heuristic[i - 1][j]:
+                            self.heuristic[i - 1][j].remove(0)
+                        if i < self.dimension - 2 and 0 in self.heuristic[i + 2][j]:
+                            self.heuristic[i + 2][j].remove(0)
+                    if i < self.dimension - 2 and self.table[i + 2][j] == '0' and 0 in self.heuristic[i + 1][j]:
+                        self.heuristic[i + 1][j].remove(0)
+                    if i > 1 and self.table[i - 2][j] == '0' and 0 in self.heuristic[i - 1][j]:
+                        self.heuristic[i - 1][j].remove(0)
+                    if j < self.dimension - 2 and self.table[i][j + 2] == '0' and 0 in self.heuristic[i][j + 1]:
+                        self.heuristic[i][j + 1].remove(0)
+                    if j > 1 and self.table[i][j - 2] == '0' and 0 in self.heuristic[i][j - 1]:
+                        self.heuristic[i][j - 1].remove(0)
+
+        '''
+        for having same count for zeros and ones in each row and column
+        '''
+        for i in range(self.dimension):
+            counter = 0
+            count_one = 0
+            count_zero = 0
+            x = y = -1
+            for j in range(self.dimension):
+                if self.table[i][j] == '-':
+                    counter += 1
+                    x = i
+                    y = j
+                if self.table[i][j] == '1':
+                    count_one += 1
+                if self.table[i][j] == '0':
+                    count_zero += 1
+            if counter == 1:
+                if count_one - count_zero == 1 and 1 in self.heuristic[x][y]:
+                    self.heuristic[x][y].remove(1)
+                if count_zero - count_one == 1 and 0 in self.heuristic[x][y]:
+                    self.heuristic[x][y].remove(0)
+        for i in range(self.dimension):
+            counter = 0
+            count_one = 0
+            count_zero = 0
+            x = y = -1
+            for j in range(self.dimension):
+                if self.table[j][i] == '-':
+                    counter += 1
+                    x = i
+                    y = j
+                if self.table[j][i] == '1':
+                    count_one += 1
+                if self.table[j][i] == '0':
+                    count_zero += 1
+            if counter == 1:
+                if count_one - count_zero == 1 and 1 in self.heuristic[y][x]:
+                    self.heuristic[y][x].remove(1)
+                if count_zero - count_one == 1 and 0 in self.heuristic[y][x]:
+                    self.heuristic[y][x].remove(0) 
 
     '''
-    to find robot position
+    backtrack algorithm with MRV checking 
+    each time update the heuristic of each block
     '''
-    def find_robot(self):
-        for i in range(self.rows):
-            for j in range(self.cols):
-                if 'r' in self.table[i][j]:
-                    return i, j
+
+    def MRV_backTrack(self):
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                if len(self.heuristic[i][j]) == 1 and self.table[i][j] == '-':
+                    self.table[i][j] = str(self.heuristic[i][j][0])
+                    self.h()
+                    terminal(self.table)
+                    if not game.rules():
+                        print("❌ ERROR ❌")
+                        exit(0)
+                    self.MRV_backTrack()
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                if self.table[i][j] == '-':
+                    if not self.error():
+                        terminal(self.table)
+                        exit(0)
+                    self.table[i][j] = str(self.heuristic[i][j][0])
+                    terminal(self.table)
+                    if not game.rules():
+                        self.heuristic[i][j].remove(self.heuristic[i][j][0])
+                        self.table[i][j] = '-'
+                        self.h()
+                        self.MRV_backTrack()
+                    self.h()
+                    self.MRV_backTrack()
+        return self.table
+
     '''
-    to find the butters position
+    check if it has an error and cant continue
     '''
-    def find_butter(self):
-        self.butter_list = []
-        for i in range(self.rows):
-            for j in range(self.cols):
-                if 'b' in self.table[i][j]:
-                    self.butter_list.append((i, j))
+
+    def error(self):
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                if len(self.heuristic[i][j]) < 1:
+                    print('❌ ERROR ❌')
+                    return False
+        return True
+
     '''
-    to find the obstacles position
+    check if the algorithm is finished and the puzzle is complete
     '''
-    def find_obstacles(self):
-        self.obstacle_list = []
-        for i in range(self.rows):
-            for j in range(self.cols):
-                if 'x' in self.table[i][j]:
-                    self.obstacle_list.append((i, j))
+
+    def complete(self):
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                if self.table[i][j] == '-':
+                    return False
+        return True
+
     '''
-    check all the available actions for robot and return them
+    check all the rules
+    if any of them is broken returns false esle returns true
     '''
-    def available_actions(self, robot, butter):
-        actions = []
-        if robot[0] - 1 >= 0 and self.table[robot[0] - 1][robot[1]] != "x":
-            if butter == (robot[0] - 1, robot[1]):
-                if robot[0] - 2 >= 0 and self.table[robot[0] - 2][robot[1]] != "x":
-                    actions.append("U")
-            else:
-                actions.append("U")
 
-        if robot[0] + 1 < self.rows and self.table[robot[0] + 1][robot[1]] != "x":
-            if butter == (robot[0] + 1, robot[1]):
-                if robot[0] + 2 < self.rows and self.table[robot[0] + 2][robot[1]] != "x":
-                    actions.append("D")
-            else:
-                actions.append("D")
+    def rules(self):
+        strings_row = []
+        strings_column = []
+        for i in range(self.dimension):  # all rows are copied in strings_row
+            table_copy = self.table[i]
+            table_copy = ''.join(table_copy)
+            strings_row.append(table_copy)
 
-        if robot[1] - 1 >= 0 and self.table[robot[0]][robot[1] - 1] != "x":
-            if butter == (robot[0], robot[1] - 1):
-                if robot[1] - 2 >= 0 and self.table[robot[0]][robot[1] - 2] != "x":
-                    actions.append("L")
-            else:
-                actions.append("L")
+        for i in range(self.dimension):  # each row should have equal zeros and ones
+            count_one = 0
+            count_zero = 0
+            if '-' not in strings_row[i]:
+                for j in range(self.dimension):
+                    if self.table[i][j] == '1':
+                        count_one += 1
+                    if self.table[i][j] == '0':
+                        count_zero += 1
+                if count_one != count_zero:
+                    return False
 
-        if robot[1] + 1 < self.cols and self.table[robot[0]][robot[1] + 1] != "x":
-            if butter == (robot[0], robot[1] + 1):
-                if robot[1] + 2 < self.cols and self.table[robot[0]][robot[1] + 2] != "x":
-                    actions.append("R")
-            else:
-                actions.append("R")
-        return actions
-    '''
-    check the action given with all available actions
-    if allowed then it moves the robot and if needed the butter
-    '''
-    def step(self, robot, butter, action):
-        # action : "U", "D", "R", "L"
-        # robot: tuple (x, y)
-        if action not in self.available_actions(robot, butter):
-            raise ValueError("action is not available")
+        while len(strings_row) > 0:  # check if there is a repeated string in rows
+            element = strings_row.pop(0)
+            # print(strings_row, "before")
+            if '-' not in element and element in strings_row:
+                strings_row = []
+                return False
 
-        if action == "U":
-            next_robot = robot[0] - 1, robot[1]
-            cost = self.table[next_robot[0]][next_robot[1]]
-            cost = cost.replace("b", "")
-            cost = cost.replace("r", "")
-            cost = cost.replace("p", "")
-            if next_robot == butter:
-                butter = butter[0] - 1, butter[1]
-            return next_robot, butter, int(cost)
+        for j in range(self.dimension):  # all columns are copied in strings_column
+            table_copy = [row[j] for row in self.table]
+            table_copy = ''.join(table_copy)
+            strings_column.append(table_copy)
 
-        elif action == "D":
-            next_robot = robot[0] + 1, robot[1]
-            cost = self.table[next_robot[0]][next_robot[1]]
-            cost = cost.replace("b", "")
-            cost = cost.replace("r", "")
-            cost = cost.replace("p", "")
-            if next_robot == butter:
-                butter = butter[0] + 1, butter[1]
-            return next_robot, butter, int(cost)
+        for i in range(self.dimension):  # each column should have equal zeros and ones
+            count_one = 0
+            count_zero = 0
+            if '-' not in strings_column[i]:
+                for j in range(self.dimension):
+                    if self.table[j][i] == '1':
+                        count_one += 1
+                    if self.table[j][i] == '0':
+                        count_zero += 1
+                if count_one != count_zero:
+                    return False
 
-        elif action == "L":
-            next_robot = robot[0], robot[1] - 1
-            cost = self.table[next_robot[0]][next_robot[1]]
-            cost = cost.replace("b", "")
-            cost = cost.replace("r", "")
-            cost = cost.replace("p", "")
-            if next_robot == butter:
-                butter = butter[0], butter[1] - 1
-            return next_robot, butter, int(cost)
-
-        elif action == "R":
-            next_robot = robot[0], robot[1] + 1
-            cost = self.table[next_robot[0]][next_robot[1]]
-            cost = cost.replace("b", "")
-            cost = cost.replace("r", "")
-            cost = cost.replace("p", "")
-            if next_robot == butter:
-                butter = butter[0], butter[1] + 1
-            return next_robot, butter, int(cost)
-
-        else:
-            raise ValueError("action is wrong")
-
-class agent():
-    def __init__(self, env):
-        self.env = env
-        self.butter = env.find_butter()
-        self.robot = env.find_robot()
-        self.people = env.find_people()
-
-    def ids(self,people_list, butter, robot):
-        root = node(None, robot, butter, None)
-        queue_temp=[]
-        depth_limit = 20
-        i = 0
-        while (i<=depth_limit):
-            front=[]
-            res=self.dfs(root,front,i, people_list)
-            if res is not None and res is not False:
-                res.insert(0, root)
-                return res, i
-
-            i+=1
-
-    def dfs(self,Node:node,path,depth, people_list):
-        for person in people_list:
-            if Node.butter == person:
-                path, action_path, robot_last = self.show_path(Node)
-                return path, action_path, robot_last
-        if(depth<=0):
-            return None
-        next = []
-        actions = env.available_actions(Node.robot, Node.butter)
-        for a in actions:
-            next_robot, next_butter, _ = env.step(Node.robot, Node.butter, a)
-            child = node(Node, next_robot, next_butter, a)
-            next.append(child)
-        for childs in next:
-            res = self.dfs(childs,path,depth-1, people_list)
-            if res is not None:
-                path.insert(0, childs)
-                return path
+        while len(strings_column) > 0:  # check if there is a repeated string in columns
+            element = strings_column.pop(0)
+            # print(strings_column, "before")
+            if '-' not in element and element in strings_column:
+                strings_column = []
+                return False
+        '''
+        for the not three same number in a row rule 
+        '''
+        for i in range(self.dimension):
+            for j in range(self.dimension):
+                if i + 2 < self.dimension:
+                    if self.table[i][j] == self.table[i + 1][j] == self.table[i + 2][j] != '-':
+                        return False
+                if i - 2 >= 0:
+                    if self.table[i][j] == self.table[i - 1][j] == self.table[i - 2][j] != '-':
+                        return False
+                if j + 2 < self.dimension:
+                    if self.table[i][j] == self.table[i][j + 1] == self.table[i][j + 2] != '-':
+                        return False
+                if j - 2 >= 0:
+                    if self.table[i][j] == self.table[i][j - 1] == self.table[i][j - 2] != '-':
+                        return False
+        return True
 
 
-
-    def show_path(self, final_node):
-        path = []
-        action_path = []
-        n = final_node
-        print("****")
-        while n.parent != None:
-            path.append(n.robot)
-            action_path.append(n.action_from_par)
-            n = n.parent
-        path.append(n.robot)
-        path.reverse()
-        action_path.reverse()
-        print("path:", path)
-        print("actions:", action_path)
-        print("cost:", len(action_path))
-        return action_path, path, n.robot
-
-
-if __name__ == "__main__":
-    with open("test3.txt", "r") as file:
-        env = environment(file)
-    people_list, butter_list = env.map()
-    robot = env.find_robot()
-    test_agent = agent(env)
-    for i in range(len(butter_list)):
-        res, i = test_agent.ids(people_list, butter_list[i], robot)
-        print(robot)
-        if i == 0:
-            print("Impossible!")
-            print("path:", [])
-            print("actions:", [])
-            print("cost:", i)
-        print("goal depth:", i)
-
+'''
+use the class and functions to get the answer
+'''
+if __name__ == '__main__':
+    table, heuristic = scan()
+    game = Game(table, heuristic)
+    game.h()
+    game.error()
+    table = game.MRV_backTrack()
+    terminal(table)
