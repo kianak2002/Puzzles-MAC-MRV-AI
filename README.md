@@ -1,4 +1,4 @@
-### General Knowledge about Project
+### General Knowledge about the Project
 
 It fills the unsolved puzzles using backtracking algorithm (MRV) and forward checking and MAC.
 
