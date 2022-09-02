@@ -20,6 +20,6 @@ This puzzle has several rules {
 
 ### Report
 
-    report can be found [here](https://github.com/kianak2002/Intelligent/blob/master/AI_proj3.pdf) in persian.
+report can be found [here](https://github.com/kianak2002/Intelligent/blob/master/AI_proj3.pdf) in persian.
 
 
