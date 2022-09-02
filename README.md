@@ -1,3 +1,5 @@
+It is a course project for Artificial Intelligence course instructed by [Dr.Behnam Roshanfekr](https://scholar.google.fr/citations?user=uU25R5IAAAAJ&hl=en)
+
 ### General Knowledge about the Project
 
 It fills the unsolved puzzles using backtracking algorithm (MRV) and forward checking and MAC.
