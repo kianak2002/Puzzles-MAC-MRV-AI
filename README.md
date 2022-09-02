@@ -1,4 +1,4 @@
-***General Knowledge about Project
+### General Knowledge about Project
 
 It fills the unsolved puzzles using backtracking algorithm (MRV) and forward checking and MAC.
 
@@ -17,7 +17,7 @@ This puzzle has several rules {
 
 
 
-***How it is implemented
+### How it is implemented
 
 from collections import defaultdict
 import copy
